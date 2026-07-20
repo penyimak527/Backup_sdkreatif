@@ -150,54 +150,154 @@ class M_jurnal_guru extends CI_Model
 	}
 
 
-	public function jurnal_guru_result()
-	{
-		$id_guru = $this->input->post('id_guru') ?? $this->input->get('id_guru');
+	// public function jurnal_guru_result()
+	// {
+	// 	$id_guru = $this->input->post('id_guru') ?? $this->input->get('id_guru');
 
-		if (!$id_guru) {
-			return []; // bisa diganti return error JSON juga
-		}
+	// 	if (!$id_guru) {
+	// 		return []; // bisa diganti return error JSON juga
+	// 	}
 
-		$data_mengajar = $this->db->query("SELECT 
-		a.*,b.kode_kelas
-		FROM kelas_jadwal_pelajaran a left join kelas b on a.id_kelas=b.id
-        WHERE a.id_guru = '$id_guru' 
-        ORDER BY FIELD(a.hari, 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu')
-    ")->result_array();
+	// 	$data_mengajar = $this->db->query("SELECT 
+	// 	a.*,b.kode_kelas
+	// 	FROM kelas_jadwal_pelajaran a left join kelas b on a.id_kelas=b.id
+    //     WHERE a.id_guru = '$id_guru' 
+    //     ORDER BY FIELD(a.hari, 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu')
+    // ")->result_array();
 
-		foreach ($data_mengajar as &$item) {
-			$tahun = date('Y');
-			if ($tahun == 2025) {
-				$tanggal = $this->getTahunSementara(ucfirst(strtolower($item['hari'])));
-			} else {
-				$tanggal = $this->getTanggalHariSetahun(ucfirst(strtolower($item['hari'])));
-			}
-			$item['tanggal'] = $tanggal;
-		}
+	// 	foreach ($data_mengajar as &$item) {
+	// 		$tahun = date('Y');
+	// 		if ($tahun == 2025) {
+	// 			$tanggal = $this->getTahunSementara(ucfirst(strtolower($item['hari'])));
+	// 		} else {
+	// 			$tanggal = $this->getTanggalHariSetahun(ucfirst(strtolower($item['hari'])));
+	// 		}
+	// 		$item['tanggal'] = $tanggal;
+	// 	}
 
-		$grouped_jadwal = [];
+	// 	$grouped_jadwal = [];
 
-		foreach ($data_mengajar as $jadwal_item) {
-			if (is_array($jadwal_item['tanggal'])) {
-				foreach ($jadwal_item['tanggal'] as $tgl) {
-					$tgl_format = DateTime::createFromFormat('Y-m-d', $tgl);
-					if (!$tgl_format)
-						continue;
+	// 	foreach ($data_mengajar as $jadwal_item) {
+	// 		if (is_array($jadwal_item['tanggal'])) {
+	// 			foreach ($jadwal_item['tanggal'] as $tgl) {
+	// 				$tgl_format = DateTime::createFromFormat('Y-m-d', $tgl);
+	// 				if (!$tgl_format)
+	// 					continue;
 
-					$tgl_string = $tgl_format->format('Y-m-d');
-					if ($tgl_string > date('Y-m-d'))
-						continue;
+	// 				$tgl_string = $tgl_format->format('Y-m-d');
+	// 				if ($tgl_string > date('Y-m-d'))
+	// 					continue;
 
-					$jurnal = $this->db->get_where('jurnal_guru', [
-						'id_kelas_jadwal_pelajaran' => $jadwal_item['id'],
-						'tanggal' => date('d-m-Y', strtotime($tgl))
-					])->row_array();
+	// 				$jurnal = $this->db->get_where('jurnal_guru', [
+	// 					'id_kelas_jadwal_pelajaran' => $jadwal_item['id'],
+	// 					'tanggal' => date('d-m-Y', strtotime($tgl))
+	// 				])->row_array();
 
-					if (date('d-m-Y', strtotime($tgl)) == ($jurnal['tanggal'] ?? ''))
-						continue;
+	// 				if (date('d-m-Y', strtotime($tgl)) == ($jurnal['tanggal'] ?? ''))
+	// 					continue;
 
-					$tanggal = date('d-m-Y', strtotime($tgl));
-					$absen = $this->db->query("
+	// 				$tanggal = date('d-m-Y', strtotime($tgl));
+	// 				$absen = $this->db->query("
+    //                 SELECT a.* 
+    //                 FROM izin_pegawai a 
+    //                 LEFT JOIN pegawai_jabatan b ON a.id_pegawai = b.id_pegawai 
+    //                 WHERE a.id_pegawai = '$id_guru' 
+    //                 AND a.tgl_tidak_hadir = '$tanggal' 
+    //                 AND a.status_approval = 1 
+    //                 AND b.jabatan = 'Guru'
+    //             ")->row_array();
+
+	// 				if ($absen)
+	// 					continue;
+
+	// 				$grouped_jadwal[$tgl][] = $jadwal_item;
+	// 			}
+	// 		} else {
+	// 			$tgl = DateTime::createFromFormat('d-m-Y', $jadwal_item['tanggal'])->format('Y-m-d');
+	// 			$grouped_jadwal[$tgl][] = $jadwal_item;
+	// 		}
+	// 	}
+
+	// 	ksort($grouped_jadwal);
+	// 	return $grouped_jadwal;
+	// }
+
+public function jurnal_guru_result()
+{
+    $id_guru = $this->input->post('id_guru') ?? $this->input->get('id_guru');
+
+    // Ambil tahun ajaran aktif
+    $periode_aktif = $this->db
+        ->get_where('master_tahun_ajaran', ['status' => 'Aktif'])
+        ->row_array();
+
+    if (empty($periode_aktif)) {
+        return [];
+    }
+
+    // Tentukan semester aktif berdasarkan bulan berjalan
+    // Juli - Desember = Ganjil
+    // Januari - Juni = Genap
+    $bulan_sekarang = date('m');
+    $semester_aktif = in_array($bulan_sekarang, ['07', '08', '09', '10', '11', '12'])
+        ? 'Ganjil'
+        : 'Genap';
+
+    $this->db->select('a.*, b.kode_kelas');
+    $this->db->from('kelas_jadwal_pelajaran a');
+    $this->db->join('kelas b', 'a.id_kelas = b.id', 'left');
+    $this->db->join('master_tahun_ajaran c', 'a.id_periode = c.id', 'inner');
+    $this->db->where('a.id_guru', $id_guru);
+    $this->db->where('a.id_periode', $periode_aktif['id']);
+    $this->db->where('a.semester', $semester_aktif);
+    $this->db->where('c.status', 'Aktif');
+    $this->db->order_by("FIELD(a.hari, 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu')", '', false);
+
+    $data_mengajar = $this->db->get()->result_array();
+
+    foreach ($data_mengajar as &$item) {
+        $tanggal = $this->getTanggalHariSemester(
+            ucfirst(strtolower($item['hari'])),
+            $periode_aktif['periode'],
+            $semester_aktif
+        );
+
+        $item['tanggal'] = $tanggal;
+    }
+
+    $grouped_jadwal = [];
+
+    foreach ($data_mengajar as $jadwal_item) {
+        if (is_array($jadwal_item['tanggal'])) {
+            foreach ($jadwal_item['tanggal'] as $tgl) {
+                $tgl_format = DateTime::createFromFormat('Y-m-d', $tgl);
+
+                if (!$tgl_format) {
+                    continue;
+                }
+
+                $tgl_string = $tgl_format->format('Y-m-d');
+
+                // Jangan tampilkan tanggal masa depan
+                if ($tgl_string > date('Y-m-d')) {
+                    continue;
+                }
+
+                $tanggal = date('d-m-Y', strtotime($tgl));
+
+                // Cek apakah jurnal untuk jadwal dan tanggal ini sudah dibuat
+                $tgl_jurnal_guru = $this->db->get_where('jurnal_guru', [
+                    'id_kelas_jadwal_pelajaran' => $jadwal_item['id'],
+                    'id_guru' => $id_guru,
+                    'tanggal' => $tanggal
+                ])->row_array();
+
+                if (!empty($tgl_jurnal_guru)) {
+                    continue;
+                }
+
+                // Cek izin guru pada tanggal tersebut
+                $absen_tidak_hadir = $this->db->query("
                     SELECT a.* 
                     FROM izin_pegawai a 
                     LEFT JOIN pegawai_jabatan b ON a.id_pegawai = b.id_pegawai 
@@ -207,20 +307,72 @@ class M_jurnal_guru extends CI_Model
                     AND b.jabatan = 'Guru'
                 ")->row_array();
 
-					if ($absen)
-						continue;
+                if (!empty($absen_tidak_hadir)) {
+                    continue;
+                }
 
-					$grouped_jadwal[$tgl][] = $jadwal_item;
-				}
-			} else {
-				$tgl = DateTime::createFromFormat('d-m-Y', $jadwal_item['tanggal'])->format('Y-m-d');
-				$grouped_jadwal[$tgl][] = $jadwal_item;
-			}
-		}
+                $grouped_jadwal[$tgl][] = $jadwal_item;
+            }
+        }
+    }
 
-		ksort($grouped_jadwal);
-		return $grouped_jadwal;
-	}
+    krsort($grouped_jadwal);
+
+    return $grouped_jadwal;
+}
+
+public function getTanggalHariSemester($hari, $periode, $semester)
+{
+    $hariArray = [
+        'Senin' => 'monday',
+        'Selasa' => 'tuesday',
+        'Rabu' => 'wednesday',
+        'Kamis' => 'thursday',
+        'Jumat' => 'friday',
+        'Sabtu' => 'saturday',
+        'Minggu' => 'sunday',
+    ];
+
+    if (empty($hariArray[$hari])) {
+        return [];
+    }
+
+    $periode_explode = explode('/', $periode);
+
+    if (count($periode_explode) < 2) {
+        return [];
+    }
+
+    $tahun_awal = $periode_explode[0];
+    $tahun_akhir = $periode_explode[1];
+
+    if ($semester == 'Ganjil') {
+        $tanggal_awal = $tahun_awal . '-07-01';
+        $tanggal_akhir = $tahun_awal . '-12-31';
+    } else {
+        $tanggal_awal = $tahun_akhir . '-01-01';
+        $tanggal_akhir = $tahun_akhir . '-06-30';
+    }
+
+    $tanggal = [];
+
+    $startDate = strtotime($tanggal_awal);
+    $endDate = strtotime($tanggal_akhir);
+
+    $targetHari = $hariArray[$hari];
+
+    if (strtolower(date('l', $startDate)) === strtolower($targetHari)) {
+        $date = $startDate;
+    } else {
+        $date = strtotime("next {$targetHari}", $startDate);
+    }
+
+    for ($date; $date <= $endDate; $date = strtotime('+1 week', $date)) {
+        $tanggal[] = date('Y-m-d', $date);
+    }
+
+    return $tanggal;
+}
 
 
 	public function tambah()

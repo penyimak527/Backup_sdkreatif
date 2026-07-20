@@ -295,10 +295,6 @@ if ($('input[name="tanggal_awal_saldo"]').length) {
 		onChange: function () {
 			let tanggal_awal = $('input[name="tanggal_awal_saldo"]').val();
 			let tanggal_akhir = $('input[name="tanggal_akhir_saldo"]').val();
-
-			if (tanggal_awal != '' && tanggal_akhir != '') {
-				saldo();
-			}
 		}
 	});
 }
@@ -310,10 +306,6 @@ if ($('input[name="tanggal_akhir_saldo"]').length) {
 		onChange: function () {
 			let tanggal_awal = $('input[name="tanggal_awal_saldo"]').val();
 			let tanggal_akhir = $('input[name="tanggal_akhir_saldo"]').val();
-
-			if (tanggal_awal != '' && tanggal_akhir != '') {
-				saldo();
-			}
 		}
 	});
 }
