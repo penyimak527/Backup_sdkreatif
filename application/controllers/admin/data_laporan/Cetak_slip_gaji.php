@@ -19,8 +19,8 @@ class Cetak_slip_gaji extends CI_Controller
         $this->db->select('a.id as id_pegawai, a.nama_pegawai, b.id as id_gaji, b.gaji_pokok, 
 		b.struktural, b.tunjangan_pendidikan, b.wali_kelas');
         $this->db->from('pegawai a');
-        $this->db->join('gaji b', 'a.id = b.id_pegawai', 'left');
-        // $this->db->join('potongan_pegawai c', 'a.id = c.id_pegawai', 'left');
+        $this->db->join('gaji b', 'a.id = b.id_pegawai', 'inner');
+
         if ($id_pegawai) {
             $this->db->where('a.id', $id_pegawai);
         }

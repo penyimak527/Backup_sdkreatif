@@ -16,14 +16,11 @@ class Laporan_ttd_gaji extends CI_Controller
         $tahun = $ambil['filter_tahun'];
         $pegawai_list = $this->db->query("SELECT * FROM pegawai_jabatan ORDER BY id_pegawai asc")->result_array();
 
-        $tanggal_terakhir = date('t', strtotime($tahun . '-' . $bulan . '-01'));
-		$tanggal_laporan = $tanggal_terakhir . ' ' . $this->getBulan($bulan) . ' ' . $tahun;
         $data = [
             'judul' => $this->getBulan($bulan) . " " . $tahun,
             'title' => 'TTD Penerima Gaji',
             'status' => 'Bulan',
             'penerimaan_gaji' => $pegawai_list,
-            'tanggal_laporan'	=> $tanggal_laporan
         ];
 
         $this->load->view('admin/data_laporan/laporan_ttd_penerimaan_gaji', $data);

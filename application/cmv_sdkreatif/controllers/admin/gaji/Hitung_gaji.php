@@ -21,6 +21,21 @@ class Hitung_gaji extends CI_Controller
         $this->load->view('template/footer');
     }
 
+
+    public function hari_efektif_result()
+    {
+        $bulan = $this->input->post('bulan');
+        $tahun = $this->input->post('tahun');
+        $data = $this->model->hari_efektif_result($bulan, $tahun);
+        echo json_encode($data);
+    }
+
+    public function simpan_hari_efektif()
+    {
+        $data = $this->model->simpan_hari_efektif();
+        echo json_encode($data);
+    }
+
     public function hitung_gaji_result()
     {
         $search = $this->input->post('search');

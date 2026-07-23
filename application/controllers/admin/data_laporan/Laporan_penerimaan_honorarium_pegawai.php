@@ -16,7 +16,8 @@ public function print_laporan()
     $bulan = str_pad((int) ($ambil['filter_bulan'] ?? 0), 2, '0', STR_PAD_LEFT);
     $tahun = (int) ($ambil['filter_tahun'] ?? 0);
 
-    $hari_kerja = 15;
+$data_hari_efektif = $this->db->get_where('hari_efektif', ['bulan' => $bulan, 'tahun' => $tahun])->row_array();
+$hari_kerja = (int) ($data_hari_efektif['hari_efektif'] ?? 0);
 
     $rumus_tidak_hadir = $this->db->where('LOWER(nama_potongan)', 'tidak_hadir')->get('rumus_potongan')->row_array();
     $persen_tidak_hadir = (float) ($rumus_tidak_hadir['persen'] ?? 5);
@@ -39,7 +40,7 @@ public function print_laporan()
     ');
     $this->db->from('pegawai a');
     $this->db->join('pegawai_jabatan b', 'a.id = b.id_pegawai', 'left');
-    $this->db->join('gaji c', 'a.id = c.id_pegawai', 'left');
+    $this->db->join('gaji c', 'a.id = c.id_pegawai', 'inner');
     $this->db->order_by('a.id', 'ASC');
     $pegawai = $this->db->get()->result_array();
 

@@ -7,7 +7,7 @@
             <div class="col-md-2">
                 <div class="mb-3">
                     <div class="input-group">
-                        <select id="cari-bulan-penggajian" class=" form-control " onchange="penggajian_pegawai()">
+                        <select id="cari-bulan-penggajian" class=" form-control " >
                             <option value="">Pilih Bulan</option>
                             <?php
                             $bulan_now = date('m');
@@ -31,8 +31,7 @@
                             for ($c = 0; $c < $jlh_bln; $c += 1) {
                                 $no++;
                                 $no_pas = sprintf("%02s", $no);
-                                $selected = ($no_pas == $bulan_now) ? 'selected' : '';
-                                echo '<option value="' . $no_pas . '" ' . $selected . '> ' . $bulan[$c] . ' </option>';
+                                echo '<option value="' . $no_pas . '"> ' . $bulan[$c] . ' </option>';
                             }
                             ?>
                         </select>
@@ -42,13 +41,12 @@
             <div class="col-md-2">
                 <div class="mb-3">
                     <div class="input-group">
-                        <select id="cari-tahun-penggajian" class=" form-control " onchange="penggajian_pegawai()">
+                        <select id="cari-tahun-penggajian" class=" form-control " >
                             <option value="">Pilih Tahun</option>
                             <?php
                             $now = date('Y');
                             for ($a = 2025; $a <= $now; $a++) {
-                                $selected = ($a == $now) ? 'selected' : '';
-                                echo '<option value="' . $a . '" ' . $selected . '>' . $a . '</option>';
+                                echo '<option value="' . $a . '">' . $a . '</option>';
                             }
                             ?>
                         </select>
@@ -56,6 +54,12 @@
                 </div>
             </div>
             <div class="col-md-3">
+                <div class="mb-3">
+                    <button type="button" class="btn btn-sm btn-primary" id="btn-cari-hitung-gaji"><i
+                            class="ri-search-line"></i></button>
+                </div>
+            </div>
+            <div class="col-md-3 area-hitung-gaji" style="display: none;">
                 <div class="mb-3">
                     <div class="input-group">
                         <input type="text" class="form-control" id="cari-pegawai" placeholder="Cari Pegawai"
@@ -65,7 +69,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-5">
+            <div class="col-md-5 area-hitung-gaji" style="display: none;">
                 <div class="mb-3">
                     <div class="d-flex gap-2 float-end">
                         <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
@@ -76,6 +80,20 @@
                 </div>
             </div>
         </div>
+        <div class="row" id="area-hari-efektif" style="display: none;">
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label class="form-label">Hari Efektif</label>
+                    <div class="input-group">
+                        <input type="number" min="1" class="form-control" id="hari-efektif" placeholder="Masukkan hari efektif">
+                        <button type="button" class="btn btn-primary" id="btn-simpan-hari-efektif">Simpan</button>
+                    </div>
+                    <small class="text-muted" id="info-hari-efektif"></small>
+                </div>
+            </div>
+        </div>
+
+        <div id="area-result-penggajian" style="display: none;">
         <div class="table-responsive-sm">
             <table class="table table-bordered m-b-0" id="table_penggajian">
                 <thead>
@@ -106,6 +124,7 @@
                 </select>
                 <span>entri</span>
             </div>
+        </div>
         </div>
     </div>
 </div>
@@ -307,10 +326,14 @@
 
 <script>
     $(document).ready(function () {
-        penggajian_pegawai();
+        reset_tampilan_penggajian();
         $('#dt-length-0').on('change', function () {
             const jumlah = parseInt($(this).val());
             paging($('#table_penggajian tbody tr'), jumlah);
+        });
+
+        $('#btn-simpan-hari-efektif').on('click', function () {
+            simpan_hari_efektif();
         });
         $("#btn-simpan-potongan-gaji").click(function () {
             $('#btn-simpan-potongan-gaji').prop('disabled', true);
@@ -364,13 +387,130 @@
                 }
             });
         });
+        $('#btn-cari-hitung-gaji').on('click', function () {
+            var bulan = $('#cari-bulan-penggajian').val();
+            var tahun = $('#cari-tahun-penggajian').val();
+
+            if (bulan === '' || tahun === '') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Perhatian',
+                    text: 'Silakan pilih bulan dan tahun terlebih dahulu.'
+                });
+                return;
+            }
+
+            filter_penggajian();
+        });
     })
+
+
+    function reset_tampilan_penggajian() {
+        $('#area-hari-efektif').hide();
+        $('.area-hitung-gaji').hide();
+        $('#area-result-penggajian').hide();
+        $('#hari-efektif').val('');
+        $('#info-hari-efektif').text('');
+        $('#table_penggajian tbody').empty();
+    }
+
+    function filter_penggajian() {
+        var bulan = $('#cari-bulan-penggajian').val();
+        var tahun = $('#cari-tahun-penggajian').val();
+
+        reset_tampilan_penggajian();
+
+        if (bulan === '' || tahun === '') {
+            return;
+        }
+
+        $('#area-hari-efektif').show();
+        cek_hari_efektif();
+    }
+
+    function cek_hari_efektif() {
+        var bulan = $('#cari-bulan-penggajian').val();
+        var tahun = $('#cari-tahun-penggajian').val();
+
+        $.ajax({
+            url: '<?= base_url('admin/gaji/hitung_gaji/hari_efektif_result'); ?>',
+            type: 'POST',
+            data: { bulan: bulan, tahun: tahun },
+            dataType: 'JSON',
+            success: function (res) {
+                if (res.status === true && res.data) {
+                    $('#hari-efektif').val(res.data.hari_efektif);
+                    $('#info-hari-efektif').text('Hari efektif sudah tersimpan dan dapat diperbarui.');
+                    $('.area-hitung-gaji').show();
+                    $('#area-result-penggajian').show();
+                    penggajian_pegawai();
+                } else {
+                    $('#hari-efektif').val('');
+                    $('#info-hari-efektif').text('Simpan hari efektif terlebih dahulu untuk menampilkan data penggajian.');
+                    $('.area-hitung-gaji').hide();
+                    $('#area-result-penggajian').hide();
+                }
+            }
+        });
+    }
+
+    function simpan_hari_efektif() {
+        var bulan = $('#cari-bulan-penggajian').val();
+        var tahun = $('#cari-tahun-penggajian').val();
+        var hariEfektif = $('#hari-efektif').val();
+
+        if (bulan === '' || tahun === '' || hariEfektif === '' || parseInt(hariEfektif) <= 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Data belum lengkap',
+                text: 'Bulan, tahun, dan hari efektif wajib diisi.'
+            });
+            return;
+        }
+
+        $('#btn-simpan-hari-efektif').prop('disabled', true).html('Diproses');
+
+        $.ajax({
+            url: '<?= base_url('admin/gaji/hitung_gaji/simpan_hari_efektif'); ?>',
+            type: 'POST',
+            data: {
+                bulan: bulan,
+                tahun: tahun,
+                hari_efektif: hariEfektif
+            },
+            dataType: 'JSON',
+            success: function (res) {
+                if (res.status === true) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil',
+                        text: res.message
+                    });
+                    cek_hari_efektif();
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal',
+                        text: res.message
+                    });
+                }
+            },
+            complete: function () {
+                $('#btn-simpan-hari-efektif').prop('disabled', false).html('Simpan');
+            }
+        });
+    }
 
 
     function penggajian_pegawai() {
         var cari = $('#cari-pegawai').val();
         var bulan = $('#cari-bulan-penggajian').val();
         var tahun = $('#cari-tahun-penggajian').val();
+
+        if (bulan === '' || tahun === '' || $('#area-result-penggajian').is(':hidden')) {
+            return;
+        }
+
         $.ajax({
             url: '<?= base_url('admin/gaji/hitung_gaji/hitung_gaji_result'); ?>',
             type: 'POST',

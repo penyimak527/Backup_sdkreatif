@@ -4,7 +4,14 @@ class M_hitung_gaji extends CI_Model
 {
 	public function hitung_gaji_result($search = null, $bulan = null, $tahun = null)
 	{
-		$hari_kerja = 15;
+		if (empty($bulan) || empty($tahun)) {
+			return [];
+		}
+
+		$hari_kerja = $this->get_hari_efektif($bulan, $tahun);
+		if ($hari_kerja === null) {
+			return [];
+		}
 
 		$this->db->select('a.id as id_pegawai, a.nama_pegawai, b.id as id_gaji, b.gaji_pokok, 
 		b.struktural, b.tunjangan_pendidikan, b.wali_kelas');
@@ -174,15 +181,21 @@ class M_hitung_gaji extends CI_Model
 		$bulan = $this->input->post('bulan');
 		$tahun = $this->input->post('tahun');
 
-		$this->proses_penggajian($id_pegawai, $bulan, $tahun);
-		// $this->update_pengeluaran_penggajian($bulan, $tahun);
-		return true;
+		if (empty($bulan) || empty($tahun) || $this->get_hari_efektif($bulan, $tahun) === null) {
+			return false;
+		}
+
+		return $this->proses_penggajian($id_pegawai, $bulan, $tahun);
 	}
 
 	public function hitung_semua()
 	{
 		$bulan = $this->input->post('bulan');
 		$tahun = $this->input->post('tahun');
+
+		if (empty($bulan) || empty($tahun) || $this->get_hari_efektif($bulan, $tahun) === null) {
+			return false;
+		}
 
 		$pegawai = $this->db->get('pegawai')->result_array();
 		foreach ($pegawai as $p) {
@@ -197,7 +210,10 @@ class M_hitung_gaji extends CI_Model
 	}
 	private function proses_penggajian($id_pegawai, $bulan, $tahun)
 	{
-		$hari_kerja = 15;
+		$hari_kerja = $this->get_hari_efektif($bulan, $tahun);
+		if ($hari_kerja === null) {
+			return false;
+		}
 
 		$this->db->select('
 		a.id AS id_pegawai,
@@ -586,6 +602,77 @@ class M_hitung_gaji extends CI_Model
 		$this->db->trans_commit();
 
 		return true;
+	}
+
+
+	public function hari_efektif_result($bulan, $tahun)
+	{
+		if (empty($bulan) || empty($tahun)) {
+			return [
+				'status' => false,
+				'data' => null
+			];
+		}
+
+		$data = $this->db->get_where('hari_efektif', [
+			'bulan' => $bulan,
+			'tahun' => $tahun
+		])->row_array();
+
+		return [
+			'status' => !empty($data),
+			'data' => $data ?: null
+		];
+	}
+
+	public function simpan_hari_efektif()
+	{
+		$bulan = trim((string) $this->input->post('bulan'));
+		$tahun = trim((string) $this->input->post('tahun'));
+		$hari_efektif = (int) $this->input->post('hari_efektif');
+
+		if ($bulan === '' || $tahun === '' || $hari_efektif <= 0) {
+			return [
+				'status' => false,
+				'message' => 'Bulan, tahun, dan hari efektif wajib diisi'
+			];
+		}
+
+		$cek = $this->db->get_where('hari_efektif', [
+			'bulan' => $bulan,
+			'tahun' => $tahun
+		])->row_array();
+
+		$data = [
+			'bulan' => $bulan,
+			'tahun' => $tahun,
+			'hari_efektif' => $hari_efektif
+		];
+
+		if ($cek) {
+			$this->db->where('id', $cek['id'])->update('hari_efektif', $data);
+		} else {
+			$this->db->insert('hari_efektif', $data);
+		}
+
+		return [
+			'status' => $this->db->affected_rows() >= 0,
+			'message' => 'Hari efektif berhasil disimpan'
+		];
+	}
+
+	private function get_hari_efektif($bulan, $tahun)
+	{
+		$data = $this->db->select('hari_efektif')->get_where('hari_efektif', [
+			'bulan' => $bulan,
+			'tahun' => $tahun
+		])->row_array();
+
+		if (!$data) {
+			return null;
+		}
+
+		return (int) $data['hari_efektif'];
 	}
 
 	public function get_potongan_gaji()

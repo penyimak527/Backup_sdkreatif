@@ -1591,6 +1591,20 @@
 			$('#btn_print_laporan_excel').val('daftar_penerimaan_gaji');
 			$('#form-resume-tanggal').hide();
 			$('#form-semester-tahun-ajaran').hide();
+		} else if (nama == 'Laporan Daftar Gaji Guru Dan Karyawan') {
+			$('#filter-data').hide();
+			$('#form-hari').hide();
+			$('#form-bulan').show();
+			$('#form-tahun').hide();
+			$('#form-jurnal-harian').hide();
+			$('#form-jurnal-guru').hide();
+			$('#form-jurnal-kegiatan').hide();
+			$('#form-pegawai-all').hide();
+			$('#form-pegawai-all-absen').hide();
+			$('#btn_print_laporan_excel').hide();
+			$('#btn_print_laporan_excel').val('laporan_daftar_gaji_guru_dan_karyawan');
+			$('#form-resume-tanggal').hide();
+			$('#form-semester-tahun-ajaran').hide();
 		} else {
 			$('#form-laporan-presensi-siswa').hide();
 			$('#form-jurnal-guru-kelas').hide();
