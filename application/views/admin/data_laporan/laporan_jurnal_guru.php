@@ -91,10 +91,10 @@
 				<td>GURU</td>
 				<td>MATAPELAJARAN</td>
 				<td>KELAS</td>
-				<td width="8%">JAM</td>
+				<td>JAM</td>
 				<td>KEGIATAN</td>
 				<td>TEMA</td>
-				<td width="9%">Tanggal Mengajar</td>
+				<td>Tanggal Mengajar</td>
 			</tr>
 		</thead>
 		<tbody>
@@ -120,8 +120,16 @@
 				foreach ($grouped_by_guru_mapel as $nama_guru => $mapels):
 					$rowspan_guru = array_sum(array_map('count', $mapels)); // total semua jurnal guru ini
 					$first_guru = true;
-
+					ksort($mapels);
 					foreach ($mapels as $mapel => $jurnals):
+						usort($jurnals, function ($a, $b) use ($parseDate) {
+							$da = $parseDate($a['tanggal'] ?? null) ?: $parseDate($a['tanggal_input'] ?? null);
+							$db = $parseDate($b['tanggal'] ?? null) ?: $parseDate($b['tanggal_input'] ?? null);
+							$ta = $da ? $da->getTimestamp() : PHP_INT_MAX; // yang kosong taruh di akhir
+							$tb = $db ? $db->getTimestamp() : PHP_INT_MAX;
+							return $ta <=> $tb; // ascending
+						});
+
 						$rowspan_mapel = count($jurnals);
 
 						foreach ($jurnals as $index => $jurnal):

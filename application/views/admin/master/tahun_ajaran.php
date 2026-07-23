@@ -63,7 +63,32 @@
 						<label for="simpleinput" class="form-label">Tahun Ajaran</label>
 						<input type="text" name="periode" class="form-control" placeholder="Tahun Ajaran ...">
 					</div>
-
+					<div class="row">
+						<div class="col-sm-6">
+							<div class="mb-3">
+								<label for="tanggal-awal-semester-ganjil" class="form-label">Tanggal Awal Semester Ganjil</label>
+								<input type="date" id="tanggal-awal-semester-ganjil" name="tanggal_awal_semester_ganjil" class="form-control" placeholder="Tanggal Awal (Ganjil)">
+							</div>
+						</div>
+						<div class="col-sm-6">
+							<div class="mb-3">
+								<label for="tanggal-akhir-semester-ganjil" class="form-label">Tanggal Akhir Semester Ganjil</label>
+								<input type="date" id="tanggal-akhir-semester-ganjil" name="tanggal_akhir_semester_ganjil" class="form-control" placeholder="Tanggal Akhir (Ganjil)">
+							</div>
+						</div>
+						<div class="col-sm-6">
+							<div class="mb-3">
+								<label for="tanggal-awal-semester-genap" class="form-label">Tanggal Awal Semester Genap</label>
+								<input type="date" id="tanggal-awal-semester-genap" name="tanggal_awal_semester_genap" class="form-control" placeholder="Tanggal Awal (Genap)">
+							</div>
+						</div>
+						<div class="col-sm-6">
+							<div class="mb-3">
+								<label for="tanggal-akhir-semester-genap" class="form-label">Tanggal Akhir Semester Genap</label>
+								<input type="date" id="tanggal-akhir-semester-genap" name="tanggal_akhir_semester_genap" class="form-control" placeholder="Tanggal Akhir (Genap)">
+							</div>
+						</div>
+					</div>
 				</form>
 			</div>
 			<div class="modal-footer">
@@ -83,11 +108,36 @@
 			<div class="modal-body">
 				<form id="form-edit">
 					<div class="mb-3">
-						<label for="simpleinput" class="form-label">Tahun Ajaran</label>
+						<label for="periode" class="form-label">Tahun Ajaran</label>
 						<input type="text" id="periode" name="periode" class="form-control">
 						<input type="hidden" id="id_periode" name="id_periode" class="form-control">
 					</div>
-
+					<div class="row">
+						<div class="col-sm-6">
+							<div class="mb-3">
+								<label for="edit-tanggal-awal-ganjil" class="form-label">Tanggal Awal Semester Ganjil</label>
+								<input type="date" id="edit-tanggal-awal-ganjil" name="tanggal_awal_semester_ganjil" class="form-control" placeholder="Tanggal Awal (Ganjil)">
+							</div>
+						</div>
+						<div class="col-sm-6">
+							<div class="mb-3">
+								<label for="edit-tanggal-akhir-ganjil" class="form-label">Tanggal Akhir Semester Ganjil</label>
+								<input type="date" id="edit-tanggal-akhir-ganjil" name="tanggal_akhir_semester_ganjil" class="form-control" placeholder="Tanggal Akhir (Ganjil)">
+							</div>
+						</div>
+						<div class="col-sm-6">
+							<div class="mb-3">
+								<label for="edit-tanggal-awal-genap" class="form-label">Tanggal Awal Semester Genap</label>
+								<input type="date" id="edit-tanggal-awal-genap" name="tanggal_awal_semester_genap" class="form-control" placeholder="Tanggal Awal (Genap)">
+							</div>
+						</div>
+						<div class="col-sm-6">
+							<div class="mb-3">
+								<label for="edit-tanggal-akhir-genap" class="form-label">Tanggal Akhir Semester Genap</label>
+								<input type="date" id="edit-tanggal-akhir-genap" name="tanggal_akhir_semester_genap" class="form-control" placeholder="Tanggal Akhir (Genap)">
+							</div>
+						</div>
+					</div>
 				</form>
 			</div>
 			<div class=" modal-footer">
@@ -140,6 +190,7 @@
 							title: 'Berhasil',
 							text: 'Data berhasil diupdate',
 						})
+
 						tahun_ajaran();
 					}
 				}
@@ -180,17 +231,34 @@
 				} else {
 					data.forEach(function (item) {
 						let detail = btoa(JSON.stringify(item));
-						table += `
-				 
+						let tahun_periode = item.periode.split('/')
+						let tahun_pertama = tahun_periode[0]
+						let tahun_kedua = tahun_periode[1]
+						let formatTanggal = (tanggal, fallback, sts = 'ganjil') => {
+							if (!tanggal) return `${fallback}-${sts == 'genap' ? tahun_kedua : tahun_pertama}`;
+							let [tahun, bulan, hari] = tanggal.split('-');
+							return `${hari}-${bulan}-${tahun}`;
+						};
+						
+						let tanggal_semester_ganjil = `<b>${formatTanggal(item.tanggal_awal_semester_ganjil, '01-07', 'ganjil')}</b> s/d <b>${formatTanggal(item.tanggal_akhir_semester_ganjil, '31-12', 'ganjil')}</b>`;
+						let tanggal_semester_genap = `<b>${formatTanggal(item.tanggal_awal_semester_genap, '01-01', 'genap')}</b> s/d <b>${formatTanggal(item.tanggal_akhir_semester_genap, '30-06', 'genap')}</b>`;
 
+						table += `
 						<div class="card-mapel">
 						 <p class="keterangan-hari">
 								<span>Status: <span class="badge bg-${item.status == 'Aktif' ? 'success' : 'danger'}">${item.status}</span> </span> 
 							</p>
 							<div class="keterangan-mapel">
 								<div class="keterangan-mapel-kiri">
-									<h5 class="judul-mapel" style="margin:0; margin-top: 8px;">${no++}. ${item.periode}</h5> 
-									 
+									<h5 class="judul-mapel" style="margin:0; margin-top: 8px;">${no++}. ${item.periode}</h5>
+									<div style="display: flex; flex-direction: column; gap: 4px; margin-top: 12px;">
+										<span>
+											Tanggal Semester Ganjil : ${tanggal_semester_ganjil}
+										</span>
+										<span>
+											Tanggal Semester Genap : ${tanggal_semester_genap}
+										</span>
+									</div>
 								</div>
 								<div class="keterangan-mapel-kanan">
 									<div class="d-flex justify-content-center gap-2">
@@ -222,6 +290,10 @@
 		var item = JSON.parse(atob(detail));
 		$('#id_periode').val(item.id);
 		$('#periode').val(item.periode);
+		$(`#edit-tanggal-awal-ganjil`).val(item.tanggal_awal_semester_ganjil)
+		$(`#edit-tanggal-awal-genap`).val(item.tanggal_awal_semester_genap)
+		$(`#edit-tanggal-akhir-ganjil`).val(item.tanggal_akhir_semester_ganjil)
+		$(`#edit-tanggal-akhir-genap`).val(item.tanggal_akhir_semester_genap)
 	}
 
 	function paging($selector, jumlah_tampil = 10) {

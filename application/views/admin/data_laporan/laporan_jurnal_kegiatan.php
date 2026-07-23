@@ -6,7 +6,7 @@
 	<title>JURNAL KEGIATAN</title>
 	<style type="text/css" media="print">
 		@page {
- 
+			/* size: landscape; */
 			margin: 1cm;
 		}
 
@@ -177,14 +177,15 @@ foreach ($jurnal_pegawai as $jurnal):
           $diffDays = (int)(($dtIn->getTimestamp() - $dtKeg->getTimestamp()) / 86400);
           if ($diffDays > 0) $selisihTxt = " ({$diffDays} hari)";
       }
- 
+
+      // Teks aman & terformat
       $tanggal = htmlspecialchars($jurnal['tanggal'] ?? '-', ENT_QUOTES, 'UTF-8');
       $waktu = htmlspecialchars($jurnal['waktu'] ?? '-', ENT_QUOTES, 'UTF-8');
       $kegiatan    = htmlspecialchars($jurnal['kegiatan'] ?? '-', ENT_QUOTES, 'UTF-8');
       $semester    = htmlspecialchars($jurnal['semester'] ?? '-', ENT_QUOTES, 'UTF-8');
       $periode     = htmlspecialchars($jurnal['periode'] ?? '-', ENT_QUOTES, 'UTF-8');
 
-      $tglLabel    = htmlspecialchars($tgl, ENT_QUOTES, 'UTF-8'); 
+      $tglLabel    = htmlspecialchars($tgl, ENT_QUOTES, 'UTF-8'); // key grup, sudah d-m-Y
       $tglInputLbl = $dtIn ? $dtIn->format('d-m-Y') : '-';
       ?>
       <tr>

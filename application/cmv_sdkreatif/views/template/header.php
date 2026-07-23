@@ -25,7 +25,7 @@
 
 	<link href="<?= base_url(); ?>assets/css/icons.min.css" rel="stylesheet" type="text/css" />
 	<link href="<?= base_url(); ?>assets/css/lightbox.css" rel="stylesheet" type="text/css" />
-	<link rel="stylesheet" href="<?= base_url(); ?>assets/vendor/select2/css/select2.min.css" type="text/css" >
+	<!-- <link rel="stylesheet" href="<?= base_url(); ?>assets/vendor/select2/css/select2.min.css" type="text/css" > -->
 	<link rel="stylesheet" href="https://unpkg.com/@tabler/icons-webfont@latest/tabler-icons.min.css">
 	<link href="https://cdnjs.cloudflare.com/ajax/libs/Dropify/0.2.2/css/dropify.min.css" rel="stylesheet"
 		type="text/css" />

@@ -70,9 +70,13 @@
 
 	<table style="width:100%; line-height: 1.5;" id="table1">
 		<tr>
-			<td style="width:7%; font-size:11px; text-transform:uppercase;"><?= $status ?></td>
+			<td style="width:7%; font-size:11px; text-transform:uppercase;">
+				<?= $status ?>
+			</td>
 			<td style="width:1%; font-size:11px; text-transform:uppercase;">:</td>
-			<td style="width:34%; font-size:11px;"><?php echo $judul; ?></td>
+			<td style="width:34%; font-size:11px;">
+				<?php echo $judul; ?>
+			</td>
 		</tr>
 		<tr>
 			<td style="width:7%; font-size:11px; text-transform:uppercase;">Nama</td>
@@ -109,18 +113,34 @@
 
 						if ($tgl === $tgl_input): ?>
 							<tr>
-								<td><?= $no++ ?></td>
-								<td><?= date('d-m-Y', strtotime($jurnal['tanggal'])) ?></td>
-								<td><?= date('d-m-Y H:i', strtotime($jurnal['tanggal_input'])) . $badge_selisih ?></td>
-								<td><?= htmlspecialchars($jurnal['kegiatan'], ENT_QUOTES, 'UTF-8') ?></td>
-								<td><?= htmlspecialchars($jurnal['semester'], ENT_QUOTES, 'UTF-8') ?></td>
-								<td><?= htmlspecialchars($jurnal['periode'], ENT_QUOTES, 'UTF-8') ?></td>
+								<td>
+									<?= $no++ ?>
+								</td>
+								<td>
+									<?= date('d-m-Y', strtotime($jurnal['tanggal'])) ?>
+								</td>
+								<td>
+									<?= date('d-m-Y H:i', strtotime($jurnal['tanggal_input'])) . $badge_selisih ?>
+								</td>
+								<td>
+									<?= htmlspecialchars($jurnal['kegiatan'], ENT_QUOTES, 'UTF-8') ?>
+								</td>
+								<td>
+									<?= htmlspecialchars($jurnal['semester'], ENT_QUOTES, 'UTF-8') ?>
+								</td>
+								<td>
+									<?= htmlspecialchars($jurnal['periode'], ENT_QUOTES, 'UTF-8') ?>
+								</td>
 							</tr>
 						<?php else: ?>
 							<tr>
-								<td><?= $no++ ?></td>
+								<td>
+									<?= $no++ ?>
+								</td>
 								<td colspan="5" class="text-muted" style="text-align: center;">
-									<em>Belum diisi untuk tanggal <?= date('d-m-Y', strtotime($jurnal['tanggal'])) ?>.</em>
+									<em>Belum diisi untuk tanggal
+										<?= date('d-m-Y', strtotime($jurnal['tanggal'])) ?>.
+									</em>
 								</td>
 							</tr>
 						<?php endif; ?>
@@ -179,18 +199,36 @@
 
 							<?php if (!empty($dates)): ?>
 								<?php foreach ($dates as $i => $tglKosong): ?>
-									<?php $tgl_html = htmlspecialchars($tglKosong, ENT_QUOTES, 'UTF-8'); ?>
+									<?php
+									// Cek apakah tanggal ini hari Minggu
+									$dt = DateTime::createFromFormat('d-m-Y', $tglKosong);
+									$isSunday = $dt && $dt->format('w') == 0; // 0 = Minggu
+			
+									$labelTanggal = $isSunday ? $tglKosong . ' (Libur)' : $tglKosong;
+									$tgl_html = htmlspecialchars($labelTanggal, ENT_QUOTES, 'UTF-8');
+									$styleTanggal = 'text-align: center;' . ($isSunday ? 'color:red; font-weight:bold;' : '');
+									?>
 									<tr>
 										<?php if ($i === 0): ?>
-											<td rowspan="<?= $rowspan ?>" style="text-align:center;"><?= $no++; ?></td>
-											<td rowspan="<?= $rowspan ?>"><?= $nama_safe; ?></td>
+											<td rowspan="<?= $rowspan ?>" style="text-align:center;">
+												<?= $no++; ?>
+											</td>
+											<td rowspan="<?= $rowspan ?>">
+												<?= $nama_safe; ?>
+											</td>
 										<?php endif; ?>
 
-										<td style="text-align: center;"><?= $tgl_html; ?></td>
+										<td style="<?= $styleTanggal ?>">
+											<?= $tgl_html; ?>
+										</td>
 
 										<?php if ($i === 0): ?>
-											<td rowspan="<?= $rowspan ?>" style="text-align: center;"><?= $semester; ?></td>
-											<td rowspan="<?= $rowspan ?>" style="text-align: center;"><?= $periode; ?></td>
+											<td rowspan="<?= $rowspan ?>" style="text-align: center;">
+												<?= $semester; ?>
+											</td>
+											<td rowspan="<?= $rowspan ?>" style="text-align: center;">
+												<?= $periode; ?>
+											</td>
 										<?php endif; ?>
 									</tr>
 								<?php endforeach; ?>
@@ -234,49 +272,91 @@
 
 						<?php foreach ($pegawaiKeys as $nama): ?>
 							<?php
-							$data = $jurnal_pegawai[$nama] ?? [];
-							$dates = $data['tanggal'] ?? [];
-							// Urutkan tanggal
-							usort($dates, function ($a, $b) {
-								$da = DateTime::createFromFormat('d-m-Y', $a);
-								$db = DateTime::createFromFormat('d-m-Y', $b);
-								if (!$da || !$db)
-									return strcmp($a, $b);
-								return $da <=> $db;
-							});
-
-							$rowspan = max(1, count($dates));
+							$entries = $jurnal_pegawai[$nama] ?? [];
+							if (empty($entries)) {
+								continue;
+							}
 							$nama_safe = htmlspecialchars($nama, ENT_QUOTES, 'UTF-8');
-							$semester = htmlspecialchars($data['semester'] ?? '-', ENT_QUOTES, 'UTF-8');
-							$periode = htmlspecialchars($data['periode'] ?? '-', ENT_QUOTES, 'UTF-8');
-							$mapel = htmlspecialchars($data['mapel'] ?? '-', ENT_QUOTES, 'UTF-8');
-							$nama_kelas = htmlspecialchars($data['nama_kelas'] ?? '-', ENT_QUOTES, 'UTF-8');
-							$kode_kelas = htmlspecialchars($data['kode_kelas'] ?? '-', ENT_QUOTES, 'UTF-8');
+							$rows = [];
+							foreach ($entries as $entry) {
+								$dates = $entry['tanggal'] ?? [];
+								usort($dates, function ($a, $b) {
+									$da = DateTime::createFromFormat('d-m-Y', $a);
+									$db = DateTime::createFromFormat('d-m-Y', $b);
+									if (!$da || !$db)
+										return strcmp($a, $b);
+									return $da <=> $db;
+								});
+								if (empty($dates)) {
+									$dates = ['-'];
+								}
+
+								$rows[] = [
+									'dates' => $dates,
+									'semester' => htmlspecialchars($entry['semester'] ?? '-', ENT_QUOTES, 'UTF-8'),
+									'periode' => htmlspecialchars($entry['periode'] ?? '-', ENT_QUOTES, 'UTF-8'),
+									'mapel' => htmlspecialchars($entry['mapel'] ?? '-', ENT_QUOTES, 'UTF-8'),
+									'nama_kelas' => htmlspecialchars($entry['nama_kelas'] ?? '-', ENT_QUOTES, 'UTF-8'),
+									'kode_kelas' => htmlspecialchars($entry['kode_kelas'] ?? '-', ENT_QUOTES, 'UTF-8'),
+								];
+							}
+
+							$totalRows = 0;
+							foreach ($rows as $row) {
+								$totalRows += count($row['dates']);
+							}
 							?>
 
-							<?php if (!empty($dates)): ?>
+							<?php foreach ($rows as $rowIndex => $row): ?>
+								<?php
+								$dates = $row['dates'];
+								$rowspan = count($dates);
+								?>
+
 								<?php foreach ($dates as $i => $tglKosong): ?>
-									<?php $tgl_html = htmlspecialchars($tglKosong, ENT_QUOTES, 'UTF-8'); ?>
+									<?php
+									$dt = DateTime::createFromFormat('d-m-Y', $tglKosong);
+									$isSunday = $dt && $dt->format('w') == 0;
+									if ($dt) {
+										$labelTanggal = $isSunday ? $tglKosong . ' (Libur)' : $tglKosong;
+									} else {
+										$labelTanggal = $tglKosong;
+									}
+									$tgl_html = htmlspecialchars($labelTanggal, ENT_QUOTES, 'UTF-8');
+									$styleTanggal = 'text-align: center;' . ($isSunday ? 'color:red; font-weight:bold;' : '');
+									?>
 									<tr>
-										<?php if ($i === 0): ?>
-											<td rowspan="<?= $rowspan ?>" style="text-align:center;"><?= $no++; ?></td>
-											<td rowspan="<?= $rowspan ?>"><?= $nama_safe; ?></td>
+										<?php if ($i === 0 && $rowIndex === 0): ?>
+											<td rowspan="<?= $totalRows ?>" style="text-align:center;">
+												<?= $no++; ?>
+											</td>
+											<td rowspan="<?= $totalRows ?>">
+												<?= $nama_safe; ?>
+											</td>
 										<?php endif; ?>
 
-										<td style="text-align: center;"><?= $nama_kelas; ?> 						<?= $kode_kelas; ?></td>
-										<td style="text-align: center;"><?= $mapel; ?></td>
-										<td style="text-align: center;"><?= $tgl_html; ?></td>
+										<td style="text-align: center;">
+											<?= $row['nama_kelas']; ?>
+											<?= $row['kode_kelas']; ?>
+										</td>
+										<td style="text-align: center;">
+											<?= $row['mapel']; ?>
+										</td>
+										<td style="<?= $styleTanggal ?>">
+											<?= $tgl_html; ?>
+										</td>
 
 										<?php if ($i === 0): ?>
-											<td rowspan="<?= $rowspan ?>" style="text-align: center;"><?= $semester; ?></td>
-											<td rowspan="<?= $rowspan ?>" style="text-align: center;"><?= $periode; ?></td>
+											<td rowspan="<?= $rowspan ?>" style="text-align: center;">
+												<?= $row['semester']; ?>
+											</td>
+											<td rowspan="<?= $rowspan ?>" style="text-align: center;">
+												<?= $row['periode']; ?>
+											</td>
 										<?php endif; ?>
 									</tr>
 								<?php endforeach; ?>
-							<?php else: ?>
-
-							<?php endif; ?>
-
+							<?php endforeach; ?>
 						<?php endforeach; ?>
 					<?php else: ?>
 						<tr>

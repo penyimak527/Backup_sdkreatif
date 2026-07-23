@@ -1,10 +1,7 @@
 <div class="card">
     <div class="card-header border-bottom border-dashed d-flex align-items-center justify-content-between">
         <h4 class="header-title">Data <?= $title; ?></h4>
-        <!-- <div class="d-flex gap-2">
-            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
-                data-bs-target="#tambah"><i class="ri-add-line"></i>Tambah</button>
-        </div> -->
+
     </div>
     <div class="card-body">
         <div class="row">
@@ -56,61 +53,11 @@
     </div>
 </div>
 
-<!-- <div class="modal fade" id="tambah" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h4 class="modal-title" id="myLargeModalLabel">Tambah <?= $title; ?></h4>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="form-tambah">
-                    <div class="mb-3">
-                        <label for="pegawai" class="form-label">Id Pegawai</label>
-                        <input type="text" name="id_pegawai" class="form-control" placeholder="Id Pegawai ..." />
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Tutup</button>
-                <button type="button" class="btn btn-primary" id="btn-simpan">Simpan</button>
-            </div>
-        </div>
-    </div>
-</div> -->
 
 <script>
     $(document).ready(function () {
         riwayatpresensi_pegawai();
-        // $("#btn-simpan").click(function () {
-        //     $('#btn-simpan').prop('disabled', true);
-        //     $('#btn-simpan').html('Sedang Diproses');
-        //     var form = $("#form-tambah");
-        //     var formData = form.serialize();
-        //     $.ajax({
-        //         url: '<?= base_url('admin/presensi/riwayat_presensi_pegawai/presensi_pegawai_tambah'); ?>',
-        //         type: 'POST',
-        //         data: formData,
-        //         success: function (data) {
-        //             console.log(data);
-        //             $("#tambah").modal('hide');
-        //             if (data.status == true) {
-        //                 Swal.fire({
-        //                     icon: 'success',
-        //                     title: 'Berhasil',
-        //                     text: 'Data berhasil disimpan',
-        //                 }).then((result) => {
-        //                     if (result.value) {
-        //                         location.reload();
-        //                     }
-        //                 })
-        //                 $("#form-tambah")[0].reset();
-        //                 $('#btn-simpan').prop('disabled', false);
-        //                 $('#btn-simpan').html('Simpan');
-        //             }
-        //         }
-        //     })
-        // })
+    
         $('#dt-length-0').on('change', function () {
             const jumlah = parseInt($(this).val());
             paging($('#data_pegawai .card-mapel'), jumlah);

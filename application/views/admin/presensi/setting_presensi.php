@@ -1,10 +1,10 @@
 <div class="card">
 	<div class="card-header border-bottom border-dashed d-flex align-items-center justify-content-between">
 		<h4 class="header-title">Data <?= $title; ?></h4>
-		    <div class="d-flex gap-2">
-		<button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#tambah"><i
-				class="ri-add-line"></i>Tambah</button>
-</div>
+		<div class="d-flex gap-2">
+			<button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+				data-bs-target="#tambah"><i class="ri-add-line"></i>Tambah</button>
+		</div>
 	</div>
 	<div class="card-body">
 		<div class="row">
@@ -55,11 +55,13 @@
 					</div>
 					<div class="mb-3">
 						<label for="jam" class="form-label">Jam Masuk</label>
-						<input type="text" name="jam_masuk" class="form-control" placeholder="Jam Masuk ..." onkeyup="formatTimeInput(this)" maxlength="8"/>
+						<input type="text" name="jam_masuk" class="form-control" placeholder="Jam Masuk ..."
+							onkeyup="formatTimeInput(this)" maxlength="8" />
 					</div>
 					<div class="mb-3">
 						<label for="jam" class="form-label">Jam Pulang</label>
-						<input type="text" name="jam_pulang" class="form-control" placeholder="Jam Pulang ..." onkeyup="formatTimeInput(this)" maxlength="8" />
+						<input type="text" name="jam_pulang" class="form-control" placeholder="Jam Pulang ..."
+							onkeyup="formatTimeInput(this)" maxlength="8" />
 					</div>
 					<div class="mb-3">
 						<label for="status" class="form-label">Status</label>
@@ -75,7 +77,8 @@
 							<option value="">Pilih Status Jam</option>
 							<option value="Kepala Sekolah">Kepala Sekolah</option>
 							<option value="Wakil Kepala Sekolah">Wakil Kepala Sekolah</option>
-							<option value="umum">Umum</option>
+							<option value="Umum">Umum</option>
+							<option value="Guru Ngaji">Guru Ngaji</option>
 						</select>
 					</div>
 				</form>
@@ -99,13 +102,14 @@
 			const status = $('#status_peraturan').val();
 			if (status == '') {
 				Swal.fire({
-							icon: 'warning',
-							title: 'Status Kosong',
-							text: 'Status Wajib diisi!',}).then((result) => {
-				$('#btn-simpan').prop('disabled', false);
-			$('#btn-simpan').html('Simpan');
+					icon: 'warning',
+					title: 'Status Kosong',
+					text: 'Status Wajib diisi!',
+				}).then((result) => {
+					$('#btn-simpan').prop('disabled', false);
+					$('#btn-simpan').html('Simpan');
 
-							});
+				});
 				return;
 			}
 			$.ajax({
@@ -187,18 +191,18 @@
 					data.forEach(function (item) {
 						let detail = btoa(JSON.stringify(item));
 						let statusbadge = '';
-                        if (item.status == 'tidak aktif') {
-                            statusbadge = `<span class="badge bg-danger">Tidak Aktif</span>`;
-                        }else{
-                            statusbadge = `<span class="badge bg-success">Aktif</span>`;
-                        }
+						if (item.status == 'tidak aktif') {
+							statusbadge = `<span class="badge bg-danger">Tidak Aktif</span>`;
+						} else {
+							statusbadge = `<span class="badge bg-success">Aktif</span>`;
+						}
 						table += `
 							<div class="card-mapel">
 							<div class="keterangan-mapel">
 								<div class="keterangan-mapel-kiri">
 									<h5 class="judul-mapel" style="margin:0; margin-top: 8px;">${no++}. ${item.nama_aturan}</h5>   
 									  <p class="keterangan-jam-mapel">Status Pengaturan Presensi: ${statusbadge} </p>
-									  <p class="keterangan-jam-mapel">Status Jam: ${(item.status_jam && item.status_jam.trim()) || '-'} </p>
+									  <p class="keterangan-jam-mapel">Status Jam: ${item.status_jam ?? '-'} </p>
 									  <p class="keterangan-jam-mapel">Jam Masuk: ${item.jam_masuk}</p>
 									  <p class="keterangan-jam-mapel">Jam Pulang: ${item.jam_pulang}</p>
 								</div>

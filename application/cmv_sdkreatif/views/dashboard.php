@@ -84,19 +84,21 @@
 	<div class="card-header border-bottom border-dashed">
 		<div class="row">
 			<div class="col-md-4"><h4 class="header-title">Saldo</h4></div>
-		<div class="col-md-4">
-					<select id="cari-tahun-saldo" class="form-control">
-						<?php
-						$now = date('Y');
-						for ($i = 2025; $i <= $now; $i++) {
-							$selected = ($i == $now) ? 'selected' : '';
-							echo "<option value='$i' $selected>$i</option>";
-						}
-						?>
-					</select>
+		<div class="col-md-3">
+				<div class="input-group flex-nowrap">
+					<span class="input-group-text" id="basic-addon1"><i class="ri-calendar-line"></i></span>
+					<input type="text" class="form-control" id="flatpicker" placeholder="Tanggal Dari"
+						aria-describedby="inputGroupPrepend" name="tanggal_awal_saldo">
 				</div>
-
-				<div class="col-md-4">
+			</div>
+<div class="col-md-3">
+				<div class="input-group flex-nowrap">
+					<span class="input-group-text" id="basic-addon1"><i class="ri-calendar-line"></i></span>
+					<input type="text" class="form-control" id="flatpicker" placeholder="Tanggal Sampai"
+						aria-describedby="inputGroupPrepend" name="tanggal_akhir_saldo">
+				</div>
+			</div>
+				<div class="col-md-2">
 					<button class="btn btn-primary w-100" onclick="saldo()">
 						Preview
 					</button>
@@ -275,7 +277,6 @@
 	let topChart = null;
 	$(document).ready(function () {
 		jadwal_hari_ini();
-		saldo();
 		setTimeout(function () {
 			grafikPerbandingan();
 		}, 300);
@@ -287,7 +288,28 @@
 		top_pengeluaran_terbesar();
 		notifKeuangan();
 		$('#bulan_top,#tahun_top').change(function () { top_pengeluaran_terbesar(); });
+if ($('input[name="tanggal_awal_saldo"]').length) {
+	flatpickr('input[name="tanggal_awal_saldo"]', {
+		dateFormat: "d-m-Y",
+		defaultDate: "<?= date('01-m-Y') ?>",
+		onChange: function () {
+			let tanggal_awal = $('input[name="tanggal_awal_saldo"]').val();
+			let tanggal_akhir = $('input[name="tanggal_akhir_saldo"]').val();
+		}
+	});
+}
 
+if ($('input[name="tanggal_akhir_saldo"]').length) {
+	flatpickr('input[name="tanggal_akhir_saldo"]', {
+		dateFormat: "d-m-Y",
+		defaultDate: "<?= date('t-m-Y') ?>",
+		onChange: function () {
+			let tanggal_awal = $('input[name="tanggal_awal_saldo"]').val();
+			let tanggal_akhir = $('input[name="tanggal_akhir_saldo"]').val();
+		}
+	});
+}
+		saldo();
 	})
 
 	function jadwal_hari_ini() {
@@ -344,12 +366,14 @@
 		});
 	}
 	function saldo() {
-		let tahun = $('#cari-tahun-saldo').val();
+		let tanggal_awal = $('input[name="tanggal_awal_saldo"]').val();
+		let tanggal_akhir = $('input[name="tanggal_akhir_saldo"]').val();
 		$.ajax({
 			url: '<?= base_url('dashboard/saldo_result'); ?>',
 			type: 'POST',
 			data: {
-				tahun: tahun,
+				tanggal_awal: tanggal_awal,
+				tanggal_akhir: tanggal_akhir
 			},
 			dataType: 'JSON',
 			success: function (data) {

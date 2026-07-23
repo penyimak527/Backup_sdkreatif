@@ -35,9 +35,13 @@
 				<label for="status" class="form-label">Status Jam</label>
 				<select name="status_jam" class="form-control" id="status_peraturan_jam">
 					<option value="">Pilih Status Jam</option>
-					<option value="Kepala Sekolah" <?= ($data_row['status_jam'] == 'Kepala Sekolah') ? 'selected' : ''?>>Kepala Sekolah</option>
-					<option value="Wakil Kepala Sekolah" <?= ($data_row['status_jam'] == 'Wakil Kepala Sekolah') ? 'selected' : ''?>>Wakil Kepala Sekolah</option>
-					<option value="umum" <?= ($data_row['status_jam'] == 'umum') ? 'selected' : ''?>>Umum</option>
+					<option value="Kepala Sekolah" <?= ($data_row['status_jam'] == 'Kepala Sekolah') ? 'selected' : '' ?>>
+						Kepala Sekolah</option>
+					<option value="Wakil Kepala Sekolah" <?= ($data_row['status_jam'] == 'Wakil Kepala Sekolah') ? 'selected' : '' ?>>Wakil Kepala Sekolah</option>
+					<option value="Umum" <?= ($data_row['status_jam'] == 'Umum') ? 'selected' : '' ?>>Umum</option>
+					<option value="Guru Ngaji" <?= ($data_row['status_jam'] == 'Guru Ngaji') ? 'selected' : '' ?>>Guru
+						Ngaji
+					</option>
 				</select>
 			</div>
 			<button type="button" class="btn btn-primary" id="btn-update">Simpan</button>
