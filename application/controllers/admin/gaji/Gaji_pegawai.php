@@ -70,9 +70,11 @@ class Gaji_pegawai extends CI_Controller
 		echo json_encode($data);
 	}
 
-	public function hapus()
+
+
+	public function hapus_semua()
 	{
-		$data = $this->model->hapus();
+		$data = $this->model->hapus_semua();
 
 		echo json_encode($data);
 	}

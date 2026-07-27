@@ -1028,7 +1028,7 @@
 			</div>
 			<div class="modal-body">
 
-				<table id="data_penerimaan_honorarium" class="grid table table-bordered table-sm">
+				<table id="data_penerimaan_gaji_guru_karyawan" class="grid table table-bordered table-sm">
 					<thead>
 						<tr>
 							<th rowspan="2" style="width:35px;">No</th>
@@ -1178,8 +1178,8 @@
 				data_laporan_pos();
 			} else if (cek_btn == 'laporan_rekapitulasi_gaji') {
 				data_rekapitulasi_gaji();
-			} else if (cek_btn == 'laporan_penerimaan_honorarium') {
-				data_penerimaan_honorarium();
+			} else if (cek_btn == 'laporan_penerimaan_gaji_guru_karyawan') {
+				data_penerimaan_gaji_guru_karyawan();
 			} else if (cek_btn == 'laporan_rencana_pengeluaran') {
 				data_laporan_rencana_pengeluaran();
 			} else if (cek_btn == 'laporan_olah_pos') {
@@ -1451,7 +1451,7 @@
 			$('#btn_print_laporan_excel').val('laporan_rekapitulasi_gaji');
 			$('#form-resume-tanggal').hide();
 			$('#form-semester-tahun-ajaran').hide();
-		} else if (nama == 'Laporan Penerimaan Honorarium Guru Dan Karyawan') {
+		} else if (nama == 'Laporan Penerimaan Gaji Guru Dan Karyawan') {
 			$('#filter-data').hide();
 			$('#form-hari').hide();
 			$('#form-bulan').show();
@@ -1462,7 +1462,7 @@
 			$('#form-pegawai-all').hide();
 			$('#form-pegawai-all-absen').hide();
 			$('#btn_print_laporan_excel').show();
-			$('#btn_print_laporan_excel').val('laporan_penerimaan_honorarium');
+			$('#btn_print_laporan_excel').val('laporan_penerimaan_gaji_guru_karyawan');
 			$('#form-resume-tanggal').hide();
 			$('#form-semester-tahun-ajaran').hide();
 		} else if (nama == 'Slip Gaji') {
@@ -1589,6 +1589,20 @@
 			$('#form-pegawai-all-absen').hide();
 			$('#btn_print_laporan_excel').hide();
 			$('#btn_print_laporan_excel').val('daftar_penerimaan_gaji');
+			$('#form-resume-tanggal').hide();
+			$('#form-semester-tahun-ajaran').hide();
+		} else if (nama == 'Laporan Daftar Gaji Guru Dan Karyawan') {
+			$('#filter-data').hide();
+			$('#form-hari').hide();
+			$('#form-bulan').show();
+			$('#form-tahun').hide();
+			$('#form-jurnal-harian').hide();
+			$('#form-jurnal-guru').hide();
+			$('#form-jurnal-kegiatan').hide();
+			$('#form-pegawai-all').hide();
+			$('#form-pegawai-all-absen').hide();
+			$('#btn_print_laporan_excel').hide();
+			$('#btn_print_laporan_excel').val('laporan_daftar_gaji_guru_dan_karyawan');
 			$('#form-resume-tanggal').hide();
 			$('#form-semester-tahun-ajaran').hide();
 		} else {
@@ -4011,7 +4025,7 @@
 			}
 		});
 	}
-	function data_penerimaan_honorarium() {
+	function data_penerimaan_gaji_guru_karyawan() {
 		var filter = $('input[name="filter"]:checked').val();
 		var dari_tanggal = $('input[name="dari_tanggal"]').val();
 		var sampai_tanggal = $('input[name="sampai_tanggal"]').val();
@@ -4028,7 +4042,7 @@
 		};
 
 		$.ajax({
-			url: '<?= base_url('admin/laporan/laporan_penerimaan_honorarium'); ?>',
+			url: '<?= base_url('admin/laporan/laporan_penerimaan_gaji_guru_karyawan'); ?>',
 			type: 'POST',
 			data: dataPost,
 			dataType: 'JSON',
@@ -4104,7 +4118,7 @@
 					});
 				}
 
-				$('#data_penerimaan_honorarium tbody').html(table);
+				$('#data_penerimaan_gaji_guru_karyawan tbody').html(table);
 
 				$('#total_gaji_pokok').text(total_gaji_pokok);
 				$('#total_struktural').text(total_struktural);
@@ -4119,7 +4133,7 @@
 			},
 			error: function (xhr) {
 				console.log(xhr.responseText);
-				alert('Gagal mengambil data penerimaan honorarium.');
+				alert('Gagal mengambil data penerimaan gaji guru dan karyawan.');
 			}
 		});
 	}
@@ -8402,7 +8416,7 @@
 				$('#btn_print_laporan_excel').attr('disabled', false);
 				$('#btn_print_laporan_excel').html('<i class="fa fa-file-excel me-1"></i> Excel');
 			}, 5000);
-		} else if (cek_btn === 'laporan_penerimaan_honorarium') {
+		} else if (cek_btn === 'laporan_penerimaan_gaji_guru_karyawan') {
 			setTimeout(() => {
 				const bulan = document.querySelector('select[name="filter_bulan"]')?.value || '';
 				const tahun = document.querySelector('select[name="filter_tahun"]')?.value || '';
@@ -8446,9 +8460,11 @@
 					""
 				]);
 
-				const tableRows = document.querySelectorAll("#data_penerimaan_honorarium tbody tr");
+				const tableRows = document.querySelectorAll("#data_penerimaan_gaji_guru_karyawan tbody tr");
 				if (tableRows.length === 0) {
 					alert("Tidak ada data untuk diekspor.");
+					$('#btn_print_laporan_excel').attr('disabled', false);
+					$('#btn_print_laporan_excel').html('<i class="fa fa-file-excel me-1"></i> Excel');
 					return;
 				}
 
@@ -8649,8 +8665,8 @@
 					}
 				}
 				const workbook = XLSX.utils.book_new();
-				XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Penerimaan Honorarium");
-				XLSX.writeFile(workbook, `laporan_penerimaan_honorarium_bulan_${getNamaBulan(bulan)}_${tahun}.xlsx`);
+				XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Penerimaan Gaji");
+				XLSX.writeFile(workbook, `laporan_penerimaan_gaji_guru_karyawan_bulan_${getNamaBulan(bulan)}_${tahun}.xlsx`);
 
 				$('#btn_print_laporan_excel').attr('disabled', false);
 				$('#btn_print_laporan_excel').html('<i class="fa fa-file-excel me-1"></i> Excel');

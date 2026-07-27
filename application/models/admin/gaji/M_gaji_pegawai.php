@@ -245,12 +245,33 @@ class M_gaji_pegawai extends CI_Model
         return $response;
     }
 
-    public function hapus()
+   
+    public function hapus_semua()
     {
         $id_gaji = $this->input->post('id');
 
-        $this->db->delete('gaji', ['id' => $id_gaji]);
+        if (!is_array($id_gaji) || count($id_gaji) == 0) {
+            return array(
+                'status' => false,
+                'code' => 400,
+                'message' => 'Pilih data yang akan dihapus'
+            );
+        }
+
+        $id_gaji = array_filter(array_map('intval', $id_gaji));
+        if (count($id_gaji) == 0) {
+            return array(
+                'status' => false,
+                'code' => 400,
+                'message' => 'Data tidak valid'
+            );
+        }
+
+        $this->db->trans_begin();
+        $this->db->where_in('id', $id_gaji);
+        $this->db->delete('gaji');
         $this->db->trans_complete();
+
         if ($this->db->trans_status() === FALSE) {
             $this->db->trans_rollback();
             $response = array(

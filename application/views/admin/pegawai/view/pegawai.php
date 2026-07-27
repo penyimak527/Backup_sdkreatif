@@ -73,6 +73,10 @@
 				<label for="no_tlp" class="form-label">No Telepon</label>
 				<input type="text" name="no_tlp" class="form-control" placeholder="No Telepon ..." />
 			</div>
+			<div class="mb-3">
+				<label for="no_rekening" class="form-label">No Rekening</label>
+				<input type="text" name="no_rekening" class="form-control" placeholder="No Rekening ..." />
+			</div>
 			<button type="button" class="btn btn-primary" id="btn-update">Simpan</button>
 		</form>
 	</div>
@@ -142,6 +146,7 @@
 				$('#form-edit input[name="tanggal_lahir"]')[0]._flatpickr.setDate(data.tanggal_lahir, true);
 				$('#form-edit input[name="tmt"]')[0]._flatpickr.setDate(data.tmt, true);
 				$('#form-edit input[name="no_tlp"]').val(data.no_tlp);
+				$('#form-edit input[name="no_rekening"]').val(data.no_rekening);
 			}
 		});
 	}

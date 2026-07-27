@@ -2,6 +2,8 @@
 	<div class="card-header border-bottom border-dashed d-flex align-items-center justify-content-between">
 		<h4 class="header-title">Data <?= $title; ?></h4>
 		<div class="d-flex gap-2">
+			<button type="button" class="btn btn-sm btn-outline-danger" id="btn-hapus-terpilih"
+				onclick="hapus_terpilih()" disabled><i class="ri-delete-bin-line"></i>Hapus Terpilih</button>
 			<button type="button" class="btn btn-sm btn-outline-primary" onclick="gaji_pokok()"><i
 					class="ri-loop-left-line"></i>Menghitung Gaji Pokok</button>
 			<button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal"
@@ -26,6 +28,9 @@
 			<table class="table table-bordered table-hover table-sm" id="table_gaji_pegawai">
 				<thead>
 					<tr>
+						<th class="text-center">
+							<input type="checkbox" id="check-all-gaji">
+						</th>
 						<th>No</th>
 						<th>Nama Pegawai</th>
 						<th>Gaji Pokok</th>
@@ -36,6 +41,7 @@
 					</tr>
 
 					<tr>
+						<th></th>
 						<th class="text-center">#</th>
 						<th>
 							<select id="pegawai_tambah" class="form-control form-control-sm">
@@ -152,6 +158,13 @@
 		$('#dt-length-0').on('change', function () {
 			const jumlah = parseInt($(this).val());
 			paging($('#table_gaji_pegawai tbody tr'), jumlah);
+		});
+		$(document).on('change', '#check-all-gaji', function () {
+			$('.checkbox-gaji').prop('checked', $(this).is(':checked'));
+			update_hapus_terpilih();
+		});
+		$(document).on('change', '.checkbox-gaji', function () {
+			update_hapus_terpilih();
 		});
 		$('#gaji-rendah').on('show.bs.modal', function () {
 			$.ajax({
@@ -273,9 +286,13 @@
 				} else {
 					data.forEach(function (item) {
 						let detail = btoa(JSON.stringify(item));
+						let rowNo = no++;
 						table += `
 <tr id="row_${item.id}">
-	<td class="text-center">${no++}</td>
+	<td class="text-center">
+		<input type="checkbox" class="checkbox-gaji" name="id_gaji[]" value="${item.id}">
+	</td>
+	<td class="text-center">${rowNo}</td>
 	<td>${item.nama_pegawai}</td>
 	<td class="text-end">
 		Rp. ${NumberToMoney(item.gaji_pokok)}
@@ -289,19 +306,16 @@
 	<td class="text-end">
 		Rp. ${NumberToMoney(item.wali_kelas)}
 	</td>
-	<td>
-		<button class="btn btn-warning btn-sm" style="width: 35px; height: 35px;" onclick="editGaji('${no}','${item.id}','${detail}')">
+	<td class="text-center">
+		<button class="btn btn-warning btn-sm" style="width: 35px; height: 35px;" onclick="editGaji('${rowNo}','${item.id}','${detail}')">
 			<i class="ri-edit-line"></i>
-		</button>
-
-		<button class="btn btn-danger btn-sm" style="width: 35px; height: 35px;" onclick="hapus(${item.id})">
-			<i class="ri-delete-bin-line"></i>
 		</button>
 	</td>
 </tr>`;
 					});
 				}
 				$('#table_gaji_pegawai tbody').html(table);
+				update_hapus_terpilih();
 				let jumlah_awal = parseInt($('#dt-length-0').val());
 				paging($('#table_gaji_pegawai tbody tr'), jumlah_awal);
 			}
@@ -318,6 +332,7 @@
 		pegawai(item.id_pegawai, id);
 		row.html(`
 
+<td></td>
 <td>${no}</td>
 
 <td>
@@ -378,6 +393,22 @@ Batal
 				}
 			}
 		});
+	}
+
+	function get_gaji_terpilih() {
+		return $('.checkbox-gaji:checked').map(function () {
+			return $(this).val();
+		}).get();
+	}
+
+	function update_hapus_terpilih() {
+		let total = $('.checkbox-gaji').length;
+		let totalDipilih = $('.checkbox-gaji:checked').length;
+
+		$('#btn-hapus-terpilih').prop('disabled', totalDipilih == 0);
+		$('#check-all-gaji')
+			.prop('checked', total > 0 && totalDipilih == total)
+			.prop('indeterminate', totalDipilih > 0 && totalDipilih < total);
 	}
 
 	function paging(selector, jumlah_tampil = 10) {
@@ -447,10 +478,21 @@ Batal
 			}
 		})
 	}
-	function hapus(id) {
+
+	function hapus_terpilih() {
+		let ids = get_gaji_terpilih();
+		if (ids.length == 0) {
+			Swal.fire({
+				icon: 'warning',
+				title: 'Pilih Data',
+				text: 'Pilih data gaji yang akan dihapus',
+			});
+			return;
+		}
+
 		Swal.fire({
-			title: 'Hapus Data',
-			text: 'Anda yakin ingin menghapus data ini?',
+			title: 'Hapus Data Terpilih',
+			text: `Anda yakin ingin menghapus ${ids.length} data yang dipilih?`,
 			icon: 'warning',
 			showCancelButton: true,
 			confirmButtonColor: '#3085d6',
@@ -461,9 +503,9 @@ Batal
 			if (result.value) {
 				$.ajax({
 					type: 'POST',
-					url: `<?= base_url(); ?>admin/gaji/gaji_pegawai/hapus`,
+					url: `<?= base_url(); ?>admin/gaji/gaji_pegawai/hapus_semua`,
 					data: {
-						id: id
+						id: ids
 					},
 					dataType: 'json',
 					success: function (data) {
@@ -471,11 +513,16 @@ Batal
 							Swal.fire({
 								icon: 'success',
 								title: 'Berhasil',
-								text: 'Data berhasil dihapus',
+								text: data.message,
 							})
 							gaji_pegawai();
+						} else {
+							Swal.fire({
+								icon: 'error',
+								title: 'Gagal',
+								text: data.message,
+							})
 						}
-
 					}
 				})
 			}
