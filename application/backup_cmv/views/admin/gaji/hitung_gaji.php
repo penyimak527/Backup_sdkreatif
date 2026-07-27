@@ -1,130 +1,124 @@
+<div class="row mb-3">
+    <div class="col-md-2">
+        <select id="cari-bulan-penggajian" class="form-control">
+            <option value="">Pilih Bulan</option>
+            <?php
+            $bulan = array(
+                "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+                "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+            );
+
+            foreach ($bulan as $index => $nama_bulan) {
+                $nomor_bulan = sprintf('%02d', $index + 1);
+                echo '<option value="' . $nomor_bulan . '">' . $nama_bulan . '</option>';
+            }
+            ?>
+        </select>
+    </div>
+
+    <div class="col-md-2">
+        <select id="cari-tahun-penggajian" class="form-control">
+            <option value="">Pilih Tahun</option>
+            <?php
+            $now = date('Y');
+            for ($tahun = 2025; $tahun <= $now; $tahun++) {
+                echo '<option value="' . $tahun . '">' . $tahun . '</option>';
+            }
+            ?>
+        </select>
+    </div>
+
+    <div class="col-md-auto">
+        <button type="button" class="btn btn-primary btn-sm" id="btn-cari-hitung-gaji" title="Cari">
+            <i class="ri-search-line"></i>
+        </button>
+    </div>
+</div>
+
 <div class="card">
     <div class="card-header border-bottom border-dashed d-flex align-items-center justify-content-between">
         <h4 class="header-title">Data <?= $title; ?></h4>
     </div>
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-2">
-                <div class="mb-3">
-                    <div class="input-group">
-                        <select id="cari-bulan-penggajian" class=" form-control " >
-                            <option value="">Pilih Bulan</option>
-                            <?php
-                            $bulan_now = date('m');
-                            $bulan = array(
-                                "Januari",
-                                "Februari",
-                                "Maret",
-                                "April",
-                                "Mei",
-                                "Juni",
-                                "Juli",
-                                "Agustus",
-                                "September",
-                                "Oktober",
-                                "November",
-                                "Desember"
-                            );
-                            $jlh_bln = count($bulan);
-                            $no = 0;
 
-                            for ($c = 0; $c < $jlh_bln; $c += 1) {
-                                $no++;
-                                $no_pas = sprintf("%02s", $no);
-                                echo '<option value="' . $no_pas . '"> ' . $bulan[$c] . ' </option>';
-                            }
-                            ?>
-                        </select>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-2">
-                <div class="mb-3">
-                    <div class="input-group">
-                        <select id="cari-tahun-penggajian" class=" form-control " >
-                            <option value="">Pilih Tahun</option>
-                            <?php
-                            $now = date('Y');
-                            for ($a = 2025; $a <= $now; $a++) {
-                                echo '<option value="' . $a . '">' . $a . '</option>';
-                            }
-                            ?>
-                        </select>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="mb-3">
-                    <button type="button" class="btn btn-sm btn-primary" id="btn-cari-hitung-gaji"><i
-                            class="ri-search-line"></i></button>
-                </div>
-            </div>
-            <div class="col-md-3 area-hitung-gaji" style="display: none;">
-                <div class="mb-3">
-                    <div class="input-group">
-                        <input type="text" class="form-control" id="cari-pegawai" placeholder="Cari Pegawai"
-                            aria-describedby="inputGroupPrepend" onkeyup="penggajian_pegawai()">
-                        <span class="input-group-text bg-primary text-white" id="inputGroupPrepend"><i
-                                class="ri-search-line"></i></span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-5 area-hitung-gaji" style="display: none;">
-                <div class="mb-3">
-                    <div class="d-flex gap-2 float-end">
-                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
-                            data-bs-target="#persen"><i class="ri-percent-line"></i>Potongan Persen</button>
-                        <button type="button" class="btn  btn-outline-success" onclick="hitung_semua()"><i
-                                class="ri-cash-line"></i> Hitung</button>
-                    </div>
-                </div>
-            </div>
+    <div class="card-body">
+        <div id="info-filter-penggajian" class="alert alert-primary mb-0" role="alert">
+            Pilih bulan dan tahun terlebih dahulu ...
         </div>
+
         <div class="row" id="area-hari-efektif" style="display: none;">
             <div class="col-md-4">
                 <div class="mb-3">
                     <label class="form-label">Hari Efektif</label>
                     <div class="input-group">
-                        <input type="number" min="1" class="form-control" id="hari-efektif" placeholder="Masukkan hari efektif">
-                        <button type="button" class="btn btn-primary" id="btn-simpan-hari-efektif">Simpan</button>
+                        <input type="number" min="1" class="form-control" id="hari-efektif"
+                            placeholder="Masukkan hari efektif">
+                        <button type="button" class="btn btn-primary" id="btn-simpan-hari-efektif">
+                            Simpan
+                        </button>
                     </div>
                     <small class="text-muted" id="info-hari-efektif"></small>
                 </div>
             </div>
         </div>
 
-        <div id="area-result-penggajian" style="display: none;">
-        <div class="table-responsive-sm">
-            <table class="table table-bordered m-b-0" id="table_penggajian">
-                <thead>
-                    <tr>
-                        <th style="text-align: center;">No</th>
-                        <th>Nama Pegawai</th>
-                        <th>Gaji Pokok</th>
-                        <th>Gaji Bersih</th>
-                        <th>Status</th>
-                        <th>Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
+        <div class="row align-items-center area-hitung-gaji" style="display: none;">
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="cari-pegawai" placeholder="Cari Pegawai"
+                            aria-describedby="inputGroupPrepend" onkeyup="penggajian_pegawai()">
+                        <span class="input-group-text bg-primary text-white" id="inputGroupPrepend">
+                            <i class="ri-search-line"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
 
-                </tbody>
-            </table>
-        </div>
-        <div
-            class="d-flex flex-column flex-md-row justify-content-between align-items-center align-items-md-center flex-wrap gap-2 mt-2">
-            <ul class="pagination pagination-sm pagination-boxed mb-0" id="pagination"></ul>
-            <div class="d-flex align-items-center gap-2">
-                <label for="dt-length-0" class="mb-0">Tampilkan</label>
-                <select class="form-select form-select-sm" id="dt-length-0">
-                    <option value="10" selected>10</option>
-                    <option value="25">25</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                </select>
-                <span>entri</span>
+            <div class="col-md-8">
+                <div class="mb-3">
+                    <div class="d-flex gap-2 justify-content-md-end">
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                            data-bs-target="#persen">
+                            <i class="ri-percent-line"></i> Potongan Persen
+                        </button>
+                        <button type="button" class="btn btn-outline-success" onclick="hitung_semua()">
+                            <i class="ri-cash-line"></i> Hitung
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
+
+        <div id="area-result-penggajian" style="display: none;">
+            <div class="table-responsive-sm">
+                <table class="table table-bordered m-b-0" id="table_penggajian">
+                    <thead>
+                        <tr>
+                            <th style="text-align: center;">No</th>
+                            <th>Nama Pegawai</th>
+                            <th>Gaji Pokok</th>
+                            <th>Gaji Bersih</th>
+                            <th>Status</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center align-items-md-center flex-wrap gap-2 mt-2">
+                <ul class="pagination pagination-sm pagination-boxed mb-0" id="pagination"></ul>
+                <div class="d-flex align-items-center gap-2">
+                    <label for="dt-length-0" class="mb-0">Tampilkan</label>
+                    <select class="form-select form-select-sm" id="dt-length-0">
+                        <option value="10" selected>10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                    <span>entri</span>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -392,6 +386,7 @@
             var tahun = $('#cari-tahun-penggajian').val();
 
             if (bulan === '' || tahun === '') {
+                reset_tampilan_penggajian();
                 Swal.fire({
                     icon: 'warning',
                     title: 'Perhatian',
@@ -406,11 +401,13 @@
 
 
     function reset_tampilan_penggajian() {
+        $('#info-filter-penggajian').show();
         $('#area-hari-efektif').hide();
         $('.area-hitung-gaji').hide();
         $('#area-result-penggajian').hide();
         $('#hari-efektif').val('');
         $('#info-hari-efektif').text('');
+        $('#cari-pegawai').val('');
         $('#table_penggajian tbody').empty();
     }
 
@@ -424,6 +421,7 @@
             return;
         }
 
+        $('#info-filter-penggajian').hide();
         $('#area-hari-efektif').show();
         cek_hari_efektif();
     }

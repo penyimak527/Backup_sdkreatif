@@ -1026,7 +1026,7 @@ for ($i=1; $i <= $total_days; $i++) {
 	{
 			$bulan = $this->input->post('bulan');
 			$tahun = $this->input->post('tahun');
-			$hari_kerja = 12;
+
         $this->db->select('a.id as id_pegawai, a.nama_pegawai, b.id as id_gaji, b.gaji_pokok, 
 		b.struktural, b.tunjangan_pendidikan, b.wali_kelas');
         $this->db->from('pegawai a');
@@ -2573,7 +2573,8 @@ $semester = 'Tahunan';
 	{
 			$bulan = $this->input->post('bulan');
 			$tahun = $this->input->post('tahun');
-			 $hari_kerja = 15;
+			$data_hari_efektif = $this->db->get_where('hari_efektif', ['bulan' => $bulan,'tahun' => $tahun])->row_array();
+            $hari_kerja = (int) ($data_hari_efektif['hari_efektif'] ?? 0);
 
     $rumus_tidak_hadir = $this->db->where('LOWER(nama_potongan)', 'tidak_hadir')->get('rumus_potongan')->row_array();
     $persen_tidak_hadir = (float) ($rumus_tidak_hadir['persen'] ?? 5);

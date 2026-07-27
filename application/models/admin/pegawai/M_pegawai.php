@@ -35,7 +35,6 @@ class M_pegawai extends CI_Model
 		$tempat_lahir = $this->input->post('tempat_lahir');
 		$tanggal_lahir = $this->input->post('tanggal_lahir');
 		$no_telp = $this->input->post('no_tlp');
-		$no_rekening = $this->input->post('no_rekening');
 		$tmt = $this->input->post('tmt');
 		$tahun_tmt = date('Y', strtotime($tmt));
 
@@ -49,8 +48,7 @@ class M_pegawai extends CI_Model
 			'tanggal_lahir' => $tanggal_lahir,
 			'no_tlp' => $no_telp,
 			'tmt' => $tmt,
-			'angkatan' => $angkatan['angkatan'],
-			'no_rekening'	=> $no_rekening
+			'angkatan' => $angkatan['angkatan']
 
 		];
 		$response = $this->db->insert('pegawai', $data);
@@ -114,7 +112,6 @@ class M_pegawai extends CI_Model
 		$tempat_lahir = $this->input->post('tempat_lahir');
 		$tanggal_lahir = $this->input->post('tanggal_lahir');
 		$no_telp = $this->input->post('no_tlp');
-		$no_rekening = $this->input->post('no_rekening');
 		$tmt = $this->input->post('tmt');
 		$tahun_tmt = date('Y', strtotime($tmt));
 		$angkatan = $this->db->where('tahun_awal <=', $tahun_tmt)->where('tahun_akhir >=', $tahun_tmt)->get('master_angkatan')->row_array();
@@ -126,9 +123,8 @@ class M_pegawai extends CI_Model
 			'tempat_lahir' => $tempat_lahir,
 			'tanggal_lahir' => $tanggal_lahir,
 			'no_tlp' => $no_telp,
-			'no_rekening' => $no_rekening,
 			'tmt' => $tmt,
-			'angkatan' => $angkatan['angkatan'],
+			'angkatan' => $angkatan['angkatan']
 		];
 
 		$response = $this->db->update('pegawai', $data, ['id' => $id_pegawai]);

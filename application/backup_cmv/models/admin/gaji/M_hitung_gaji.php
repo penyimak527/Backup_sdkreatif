@@ -16,7 +16,7 @@ class M_hitung_gaji extends CI_Model
 		$this->db->select('a.id as id_pegawai, a.nama_pegawai, b.id as id_gaji, b.gaji_pokok, 
 		b.struktural, b.tunjangan_pendidikan, b.wali_kelas');
 		$this->db->from('pegawai a');
-		$this->db->join('gaji b', 'a.id = b.id_pegawai', 'left');
+		$this->db->join('gaji b', 'a.id = b.id_pegawai', 'inner');
 		// $this->db->join('potongan_pegawai c', 'a.id = c.id_pegawai', 'left');
 
 		if ($search != null) {
@@ -197,15 +197,14 @@ class M_hitung_gaji extends CI_Model
 			return false;
 		}
 
-		$pegawai = $this->db->get('pegawai')->result_array();
+		$pegawai = $this->db->get('gaji')->result_array();
 		foreach ($pegawai as $p) {
 			$this->proses_penggajian(
-				$p['id'],
+				$p['id_pegawai'],
 				$bulan,
 				$tahun
 			);
 		}
-		// $this->update_pengeluaran_penggajian($bulan, $tahun);
 		return true;
 	}
 	private function proses_penggajian($id_pegawai, $bulan, $tahun)
@@ -225,7 +224,7 @@ class M_hitung_gaji extends CI_Model
 		b.wali_kelas
 	');
 		$this->db->from('pegawai a');
-		$this->db->join('gaji b', 'a.id = b.id_pegawai', 'left');
+		$this->db->join('gaji b', 'a.id = b.id_pegawai', 'inner');
 		$this->db->where('a.id', $id_pegawai);
 
 		$item = $this->db->get()->row_array();
@@ -459,6 +458,7 @@ class M_hitung_gaji extends CI_Model
 			'id_gaji' => $item['id_gaji'],
 			'bulan' => $bulan,
 			'tahun' => $tahun,
+			'hari_efektif' => $hari_kerja,
 
 			'jumlah_hadir' => $jumlah_hadir,
 			'jumlah_tidak_hadir' => $jumlah_tidak_hadir,
