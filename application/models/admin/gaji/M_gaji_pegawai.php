@@ -10,6 +10,18 @@ class M_gaji_pegawai extends CI_Model
         if ($search != null) {
             $this->db->like('pg.nama_pegawai', $search);
         }
+         $this->db->order_by("
+        CASE
+            WHEN EXISTS (
+                SELECT 1
+                FROM pegawai_jabatan pj
+                WHERE pj.id_pegawai = pg.id
+                AND LOWER(TRIM(pj.jabatan)) = 'kepala sekolah'
+            ) THEN 0
+            ELSE 1
+        END ", 'ASC', false);
+
+    $this->db->order_by('pg.id', 'ASC');
         $gaji = $this->db->get('gaji gj')->result_array();
         return $gaji;
     }

@@ -96,7 +96,7 @@
 	?>
 
 	<div class="judul">
-		<h2>LAPORAN PENERIMAAN HONORARIUM GURU DAN KARYAWAN</h2>
+		<h2>LAPORAN PENERIMAAN GAJI GURU DAN KARYAWAN</h2>
 		<h3>SD KREATIF MUHAMMADIYAH LUMAJANG</h3>
 		<br>
 		<p>Bulan <?= $judul; ?></p>

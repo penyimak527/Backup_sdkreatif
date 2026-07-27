@@ -8424,7 +8424,7 @@
 				let data = [];
 
 				// Header laporan
-				data.push(["Laporan Penerimaan Honorarium Guru Dan Karyawan"]);
+				data.push(["Laporan Penerimaan Gaji Guru Dan Karyawan"]);
 				data.push(["SD Kreatif Muhammadiyah Lumajang"]);
 				data.push([`Bulan: ${getNamaBulan(bulan)} ${tahun}`]);
 				data.push([]);
@@ -8666,7 +8666,7 @@
 				}
 				const workbook = XLSX.utils.book_new();
 				XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Penerimaan Gaji");
-				XLSX.writeFile(workbook, `laporan_penerimaan_gaji_guru_karyawan_bulan_${getNamaBulan(bulan)}_${tahun}.xlsx`);
+				XLSX.writeFile(workbook, `laporan_penerimaan_gaji_guru_dan_karyawan_bulan_${getNamaBulan(bulan)}_${tahun}.xlsx`);
 
 				$('#btn_print_laporan_excel').attr('disabled', false);
 				$('#btn_print_laporan_excel').html('<i class="fa fa-file-excel me-1"></i> Excel');
