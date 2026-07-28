@@ -14,7 +14,13 @@ class Laporan_ttd_gaji extends CI_Controller
 
         $bulan = $ambil['filter_bulan'];
         $tahun = $ambil['filter_tahun'];
-        $pegawai_list = $this->db->query("SELECT * FROM pegawai_jabatan ORDER BY id_pegawai asc")->result_array();
+        $pegawai_list = $this->db->query("SELECT * FROM pegawai_jabatan 
+         ORDER BY
+        CASE
+            WHEN LOWER(TRIM(jabatan)) = 'kepala sekolah' THEN 0
+            ELSE 1
+        END ASC,
+        id_pegawai ASC ")->result_array();
 
         $tanggal_terakhir = date('t', strtotime($tahun . '-' . $bulan . '-01'));
 		$tanggal_laporan = $tanggal_terakhir . ' ' . $this->getBulan($bulan) . ' ' . $tahun;

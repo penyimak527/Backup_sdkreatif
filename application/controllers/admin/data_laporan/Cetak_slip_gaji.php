@@ -20,7 +20,16 @@ class Cetak_slip_gaji extends CI_Controller
 		b.struktural, b.tunjangan_pendidikan, b.wali_kelas');
         $this->db->from('pegawai a');
         $this->db->join('gaji b', 'a.id = b.id_pegawai', 'inner');
-
+  $this->db->order_by("
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM pegawai_jabatan pj
+            WHERE pj.id_pegawai = a.id
+            AND LOWER(TRIM(pj.jabatan)) = 'kepala sekolah'
+        ) THEN 0
+        ELSE 1
+    END", 'ASC', false);
         if ($id_pegawai) {
             $this->db->where('a.id', $id_pegawai);
         }

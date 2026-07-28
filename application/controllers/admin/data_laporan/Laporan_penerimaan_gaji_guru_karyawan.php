@@ -42,6 +42,16 @@ $hari_kerja = (int) ($data_hari_efektif['hari_efektif'] ?? 0);
     $this->db->join('pegawai_jabatan b', 'a.id = b.id_pegawai', 'left');
     $this->db->join('gaji c', 'a.id = c.id_pegawai', 'inner');
     // $this->db->order_by('a.id', 'ASC');
+    $this->db->order_by("
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM pegawai_jabatan pj
+            WHERE pj.id_pegawai = a.id
+            AND LOWER(TRIM(pj.jabatan)) = 'kepala sekolah'
+        ) THEN 0
+        ELSE 1
+    END", 'ASC', false);
     $this->db->order_by("STR_TO_DATE(a.tmt, '%d-%m-%Y')", 'ASC',false);
     $pegawai = $this->db->get()->result_array();
 
