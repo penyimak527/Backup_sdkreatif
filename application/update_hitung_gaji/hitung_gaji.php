@@ -175,7 +175,7 @@
     <td>Total Izin</td>
     <td>
         : <span id="detail_ijin"></span>
-        <small class="text-muted">(total dari semua izin)</small>
+        <small class="text-muted">(termasuk izin pribadi)</small>
     </td>
 </tr>
 
