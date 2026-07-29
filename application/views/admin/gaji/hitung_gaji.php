@@ -163,14 +163,51 @@
                                 <td>Tidak Hadir</td>
                                 <td>: <span id="detail_tidak_hadir"></span></td>
                             </tr>
-                            <tr>
+                            <!-- <tr>
                                 <td>Ijin</td>
                                 <td>: <span id="detail_ijin"></span></td>
                             </tr>
                             <tr>
                                 <td>Alfa</td>
                                 <td>: <span id="detail_alfa"></span></td>
-                            </tr>
+                            </tr> -->
+                            <tr>
+    <td>Total Izin</td>
+    <td>
+        : <span id="detail_ijin"></span>
+        <small class="text-muted">(termasuk izin pribadi)</small>
+    </td>
+</tr>
+
+<tr>
+    <td>Izin Pribadi</td>
+    <td>
+        : <span id="detail_ijin_pribadi"></span>
+        <small class="text-muted">(terkena potongan)</small>
+    </td>
+</tr>
+
+<tr>
+    <td>Izin Tidak Dipotong</td>
+    <td>
+        : <span id="detail_ijin_tidak_dipotong"></span>
+    </td>
+</tr>
+
+<tr>
+    <td>Alfa</td>
+    <td>
+        : <span id="detail_alfa"></span>
+        <small class="text-muted">(terkena potongan)</small>
+    </td>
+</tr>
+
+<tr>
+    <td>Total Hari Terkena Potongan</td>
+    <td>
+        : <strong><span id="detail_hari_dipotong"></span> hari</strong>
+    </td>
+</tr>
                         </table>
                     </div>
                 </div>
@@ -228,7 +265,9 @@
                             </tr>
 
                             <tr>
-                                <td>Potongan Tidak Hadir</td>
+                                <td>Potongan Tidak Hadir
+                                     <br> <small class="text-muted">Alfa(tidak ada keterangan) dan izin pribadi</small>
+                                </td>
                                 <td id="detail_potongan_tidak_hadir"></td>
                             </tr>
 
@@ -586,22 +625,51 @@
         $('#detail_tahun').html(item.tahun);
         $('#detail_hadir').html(item.jumlah_hadir);
         $('#detail_tidak_hadir').html(item.jumlah_tidak_hadir);
-        $('#detail_ijin').html(item.jumlah_ijin);
-        $('#detail_alfa').html(item.jumlah_alfa);
+        // $('#detail_ijin').html(item.jumlah_ijin);
+        // $('#detail_alfa').html(item.jumlah_alfa);
+
+        let jumlahIzin = parseInt(item.jumlah_ijin ?? 0);
+let jumlahIzinPribadi = parseInt(item.jumlah_ijin_pribadi ?? 0);
+let jumlahAlfa = parseInt(item.jumlah_alfa ?? 0);
+
+let jumlahIzinTidakDipotong = jumlahIzin - jumlahIzinPribadi;
+
+if (jumlahIzinTidakDipotong < 0) {
+    jumlahIzinTidakDipotong = 0;
+}
+
+let jumlahHariDipotong = jumlahAlfa + jumlahIzinPribadi;
+
+$('#detail_ijin').html(jumlahIzin);
+$('#detail_ijin_pribadi').html(jumlahIzinPribadi);
+$('#detail_ijin_tidak_dipotong').html(jumlahIzinTidakDipotong);
+$('#detail_alfa').html(jumlahAlfa);
+$('#detail_hari_dipotong').html(jumlahHariDipotong);
+
         $('#detail_gaji_pokok').html('Rp. ' + NumberToMoney(item.gaji_pokok));
         $('#detail_struktural').html('Rp. ' + NumberToMoney(item.struktural));
         $('#detail_pendidikan').html('Rp. ' + NumberToMoney(item.tunjangan_pendidikan));
         $('#detail_wali_kelas').html('Rp. ' + NumberToMoney(item.wali_kelas));
         $('#detail_total_bonus').html('Rp. ' + NumberToMoney(item.total_bonus));
         $('#detail_total_pendapatan').html('Rp. ' + NumberToMoney(item.total_pendapatan));
-        // $('#detail_potongan_tidak_hadir').html('Rp. ' + NumberToMoney(item.potongan_tidak_hadir));
-        // $('#detail_uig').html('Rp. ' + NumberToMoney(item.uig_uik));
-        // $('#detail_zakat').html('Rp. ' + NumberToMoney(item.zakat));
 
-        $('#detail_potongan_tidak_hadir').html(
-            'Rp. ' + NumberToMoney(item.potongan_tidak_hadir) +
-            ' <small class="text-muted">(' + (item.persen_potongan_tidak_hadir ?? '') + '% x '+ item.jumlah_alfa +' alfa)</small>'
-        );
+        // $('#detail_potongan_tidak_hadir').html(
+        //     'Rp. ' + NumberToMoney(item.potongan_tidak_hadir) +
+        //     ' <small class="text-muted">(' + (item.persen_potongan_tidak_hadir ?? '') + '% x '+ item.jumlah_alfa +' alfa)</small>'
+        // );
+$('#detail_potongan_tidak_hadir').html(
+    '<div>Rp. ' + NumberToMoney(item.potongan_tidak_hadir) + '</div>' +
+    '<small class="text-muted">' +
+        '(' +
+        (item.persen_potongan_tidak_hadir ?? 0) +
+        '% × ' +
+        jumlahHariDipotong +
+        ' hari: ' +
+        jumlahAlfa +
+        ' alfa + ' +
+        jumlahIzinPribadi +
+        ' izin pribadi)' +
+    '</small>');
 
         $('#detail_uig').html(
             'Rp. ' + NumberToMoney(item.uig_uik) +

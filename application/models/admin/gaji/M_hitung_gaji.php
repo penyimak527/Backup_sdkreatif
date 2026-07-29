@@ -27,9 +27,15 @@ class M_hitung_gaji extends CI_Model
 		$result = [];
 		foreach ($pegawai as $item) {
 			$jumlah_hadir = $this->db->query("SELECT COUNT(*) AS jumlah_hadir FROM presensi_pegawai WHERE id_pegawai = ? AND MONTH(STR_TO_DATE(tanggal, '%d-%m-%Y')) = ? AND YEAR(STR_TO_DATE(tanggal, '%d-%m-%Y')) = ?", array($item['id_pegawai'], $bulan, $tahun))->row()->jumlah_hadir;
+
 			$jumlah_ijin = $this->db->query("SELECT COUNT(*) AS jumlah_ijin FROM izin_pegawai
     		WHERE id_pegawai = ? AND status_approval = 1 AND MONTH(STR_TO_DATE(tgl_tidak_hadir, '%d-%m-%Y')) = ? 
     		AND YEAR(STR_TO_DATE(tgl_tidak_hadir, '%d-%m-%Y')) = ?", [$item['id_pegawai'], $bulan, $tahun])->row()->jumlah_ijin;
+
+			$jumlah_ijin_pribadi = $this->db->query("SELECT COUNT(*) AS jumlah_ijin_pribadi
+			FROM izin_pegawai WHERE id_pegawai = ? AND status_approval = 1 AND id_master_izin = 1
+			AND MONTH(STR_TO_DATE(tgl_tidak_hadir, '%d-%m-%Y')) = ? AND YEAR(STR_TO_DATE(tgl_tidak_hadir, '%d-%m-%Y')) = ?", [$item['id_pegawai'], $bulan, $tahun])->row()->jumlah_ijin_pribadi;
+			
 			$jumlah_tidak_hadir = $hari_kerja - $jumlah_hadir;
 			if ($jumlah_tidak_hadir < 0) {
 				$jumlah_tidak_hadir = 0;
@@ -39,6 +45,8 @@ class M_hitung_gaji extends CI_Model
 			if ($jumlah_alfa < 0) {
 				$jumlah_alfa = 0;
 			}
+
+			$jumlah_hari_dipotong = $jumlah_alfa + $jumlah_ijin_pribadi;
 
 			$potongan_detail = $this->db->query("SELECT mp.nama_potongan, ppd.nominal
 				FROM pegawai_potongan pp
@@ -66,19 +74,17 @@ class M_hitung_gaji extends CI_Model
 			$total_pendapatan = $gaji_pokok + $struktural + $tunjangan_pendidikan + $wali_kelas;
 			$pendapatan_total = $total_pendapatan + $bonus;
 
-			// $potongan_tidak_hadir = ($total_pendapatan * 5 / 100) * $jumlah_tidak_hadir;
 			$rumus_potongan = $this->get_rumus_potongan();
 
 			$persen_tidak_hadir = $rumus_potongan['tidak_hadir'];
 			$persen_uig_uik = $rumus_potongan['uig_uik'];
 			$persen_zakat = $rumus_potongan['zakat'];
 
-			$potongan_tidak_hadir = ($total_pendapatan * $persen_tidak_hadir / 100) * $jumlah_alfa;
+			// $potongan_tidak_hadir = ($total_pendapatan * $persen_tidak_hadir / 100) * $jumlah_alfa;
+			$potongan_tidak_hadir = ($total_pendapatan * $persen_tidak_hadir / 100) * $jumlah_hari_dipotong;
+
 			$uig_uik = $total_pendapatan * $persen_uig_uik / 100;
 			$zakat = $total_pendapatan * $persen_zakat / 100;
-			// $potongan_tidak_hadir = ($total_pendapatan * 5 / 100) * $jumlah_alfa;
-			// $uig_uik = $total_pendapatan * 1 / 100;
-			// $zakat = $total_pendapatan * 1.5 / 100;
 
 			$potongan_pinjaman = (int) ($pinjaman['nominal_tagihan'] ?? 0);
 			$s_pinjaman = (int) ($sisa_pinjaman['sisa_pinjaman'] ?? 0);
@@ -110,6 +116,7 @@ class M_hitung_gaji extends CI_Model
 					'jumlah_hadir' => $jumlah_hadir,
 					'jumlah_tidak_hadir' => $jumlah_tidak_hadir,
 					'jumlah_ijin' => $jumlah_ijin,
+					'jumlah_ijin_pribadi' => $jumlah_ijin_pribadi,
 					'jumlah_alfa' => $jumlah_alfa,
 
 					'gaji_pokok' => $gaji_pokok,
@@ -155,6 +162,7 @@ class M_hitung_gaji extends CI_Model
 				'jumlah_hadir' => $data_penggajian['jumlah_hadir'],
 				'jumlah_tidak_hadir' => $data_penggajian['jumlah_tidak_hadir'],
 				'jumlah_ijin' => $data_penggajian['jumlah_ijin'] ?? 0,
+				'jumlah_ijin_pribadi' => $data_penggajian['jumlah_ijin_pribadi'] ?? 0,
 				'jumlah_alfa' => $data_penggajian['jumlah_alfa'] ?? 0,
 				'potongan_tidak_hadir' => $data_penggajian['potongan_tidak_hadir'],
 				'uig_uik' => $data_penggajian['uig_uik'],
@@ -249,30 +257,19 @@ class M_hitung_gaji extends CI_Model
 		| Hitung presensi
 		|--------------------------------------------------------------------------
 		*/
-		$jumlah_hadir = $this->db->query("
-		SELECT COUNT(*) AS jumlah_hadir
-		FROM presensi_pegawai
-		WHERE id_pegawai = ?
-		AND MONTH(STR_TO_DATE(tanggal, '%d-%m-%Y')) = ?
-		AND YEAR(STR_TO_DATE(tanggal, '%d-%m-%Y')) = ?
-	", [
-			$id_pegawai,
-			$bulan,
-			$tahun
-		])->row()->jumlah_hadir;
+		$jumlah_hadir = $this->db->query("SELECT COUNT(*) AS jumlah_hadir
+		FROM presensi_pegawai WHERE id_pegawai = ? AND MONTH(STR_TO_DATE(tanggal, '%d-%m-%Y')) = ?
+		AND YEAR(STR_TO_DATE(tanggal, '%d-%m-%Y')) = ? ", [$id_pegawai, $bulan, $tahun])->row()->jumlah_hadir;
 
-		$jumlah_ijin = $this->db->query("
-		SELECT COUNT(*) AS jumlah_ijin
-		FROM izin_pegawai
-		WHERE id_pegawai = ?
-		AND status_approval = 1
+		$jumlah_ijin = $this->db->query("SELECT COUNT(*) AS jumlah_ijin
+		FROM izin_pegawai WHERE id_pegawai = ? AND status_approval = 1
 		AND MONTH(STR_TO_DATE(tgl_tidak_hadir, '%d-%m-%Y')) = ?
-		AND YEAR(STR_TO_DATE(tgl_tidak_hadir, '%d-%m-%Y')) = ?
-	", [
-			$id_pegawai,
-			$bulan,
-			$tahun
-		])->row()->jumlah_ijin;
+		AND YEAR(STR_TO_DATE(tgl_tidak_hadir, '%d-%m-%Y')) = ?", [$id_pegawai, $bulan, $tahun])->row()->jumlah_ijin;
+
+		$jumlah_ijin_pribadi = $this->db->query("SELECT COUNT(*) AS jumlah_ijin_pribadi FROM izin_pegawai
+			WHERE id_pegawai = ? AND status_approval = 1 AND id_master_izin = 1
+			AND MONTH(STR_TO_DATE(tgl_tidak_hadir, '%d-%m-%Y')) = ?
+			AND YEAR(STR_TO_DATE(tgl_tidak_hadir, '%d-%m-%Y')) = ?", [$id_pegawai, $bulan, $tahun])->row()->jumlah_ijin_pribadi;
 
 		$jumlah_tidak_hadir = $hari_kerja - $jumlah_hadir;
 
@@ -285,7 +282,8 @@ class M_hitung_gaji extends CI_Model
 		if ($jumlah_alfa < 0) {
 			$jumlah_alfa = 0;
 		}
-
+		
+		$jumlah_hari_dipotong = $jumlah_alfa + $jumlah_ijin_pribadi;
 		/*
 		|--------------------------------------------------------------------------
 		| Potongan tambahan pegawai
@@ -355,25 +353,6 @@ class M_hitung_gaji extends CI_Model
 			$bulan,
 			$tahun
 		]);
-		// $query_pinjaman = $this->db->query("
-		// 	SELECT
-		// 		pd.id,
-		// 		pd.id_pinjaman,
-		// 		pd.nominal_tagihan,
-		// 		pj.sisa_pinjaman
-		// 	FROM pinjaman pj
-		// 	LEFT JOIN pinjaman_detail pd
-		// 		ON pj.id = pd.id_pinjaman
-		// 	WHERE pj.id_pegawai = ?
-		// 	AND pd.bulan = ?
-		// 	AND pd.tahun = ?
-		// 	AND pd.status_bayar = 'Belum'
-		// ", [
-		// 	$id_pegawai,
-		// 	$bulan,
-		// 	$tahun
-		// ]);
-
 
 		$pinjaman = $query_pinjaman->row_array();
 
@@ -427,11 +406,8 @@ class M_hitung_gaji extends CI_Model
 		$persen_uig_uik = (float) $rumus_potongan['uig_uik'];
 		$persen_zakat = (float) $rumus_potongan['zakat'];
 
-		$potongan_tidak_hadir = (
-			$total_pendapatan *
-			$persen_tidak_hadir /
-			100
-		) * $jumlah_alfa;
+		// $potongan_tidak_hadir = ($total_pendapatan * $persen_tidak_hadir / 100) * $jumlah_alfa;
+		$potongan_tidak_hadir = ($total_pendapatan * $persen_tidak_hadir / 100) * $jumlah_hari_dipotong;
 
 		$uig_uik = $total_pendapatan * $persen_uig_uik / 100;
 		$zakat = $total_pendapatan * $persen_zakat / 100;
@@ -448,11 +424,6 @@ class M_hitung_gaji extends CI_Model
 			$total_pengeluaran
 		) + $total_bonus;
 
-		/*
-		|--------------------------------------------------------------------------
-		| Data penggajian
-		|--------------------------------------------------------------------------
-		*/
 		$data = [
 			'id_pegawai' => $id_pegawai,
 			'id_gaji' => $item['id_gaji'],
@@ -463,6 +434,7 @@ class M_hitung_gaji extends CI_Model
 			'jumlah_hadir' => $jumlah_hadir,
 			'jumlah_tidak_hadir' => $jumlah_tidak_hadir,
 			'jumlah_ijin' => $jumlah_ijin,
+			'jumlah_ijin_pribadi' => $jumlah_ijin_pribadi,
 			'jumlah_alfa' => $jumlah_alfa,
 
 			'gaji_pokok' => $gaji_pokok,
@@ -489,11 +461,6 @@ class M_hitung_gaji extends CI_Model
 
 		$this->db->trans_begin();
 
-		/*
-		|--------------------------------------------------------------------------
-		| Insert atau update penggajian
-		|--------------------------------------------------------------------------
-		*/
 		if ($cek_penggajian) {
 			$this->db
 				->where('id', $cek_penggajian['id'])
@@ -501,9 +468,6 @@ class M_hitung_gaji extends CI_Model
 
 			$id_penggajian = $cek_penggajian['id'];
 
-			/*
-			 * Hapus rincian potongan lama agar tidak menjadi duplikat.
-			 */
 			$this->db
 				->where('id_penggajian', $id_penggajian)
 				->delete('penggajian_potongan');
@@ -512,11 +476,7 @@ class M_hitung_gaji extends CI_Model
 			$id_penggajian = $this->db->insert_id();
 		}
 
-		/*
-		|--------------------------------------------------------------------------
-		| Simpan kembali rincian potongan
-		|--------------------------------------------------------------------------
-		*/
+
 		foreach ($potongan_detail as $potongan) {
 			$this->db->insert('penggajian_potongan', [
 				'id_penggajian' => $id_penggajian,
@@ -525,23 +485,8 @@ class M_hitung_gaji extends CI_Model
 			]);
 		}
 
-		/*
-	|--------------------------------------------------------------------------
-	| Insert atau hitung ulang cicilan pinjaman
-	|--------------------------------------------------------------------------
-	|
-	| Saat penggajian baru:
-	| sisa pinjaman dikurangi cicilan penuh.
-	|
-	| Saat penggajian dihitung ulang:
-	| sisa pinjaman hanya disesuaikan berdasarkan selisih antara
-	| cicilan terbaru dan cicilan yang sebelumnya tersimpan di penggajian.
-	*/
 		if ($id_detail_pinjaman !== null) {
-			/*
-			 * Cicilan yang sebelumnya sudah dimasukkan ke penggajian.
-			 * Jika penggajian belum ada, cicilan lama dianggap 0.
-			 */
+
 			$cicilan_lama = 0;
 
 			if ($cek_penggajian) {
@@ -550,29 +495,15 @@ class M_hitung_gaji extends CI_Model
 				);
 			}
 
-			/*
-			 * Hitung perbedaan cicilan terbaru dengan cicilan lama.
-			 */
-			$selisih_cicilan = $potongan_pinjaman - $cicilan_lama;
 
-			/*
-			 * Sesuaikan sisa pinjaman menggunakan selisih.
-			 *
-			 * Cicilan bertambah:
-			 * sisa pinjaman akan berkurang.
-			 *
-			 * Cicilan berkurang:
-			 * sisa pinjaman akan bertambah kembali.
-			 */
+			$selisih_cicilan = $potongan_pinjaman - $cicilan_lama;
+			
 			$sisa_baru = $sisa_pinjaman - $selisih_cicilan;
 
 			if ($sisa_baru < 0) {
 				$sisa_baru = 0;
 			}
 
-			/*
-			 * Update detail cicilan pada bulan dan tahun tersebut.
-			 */
 			$this->db
 				->where('id', $id_detail_pinjaman)
 				->update('pinjaman_detail', [
@@ -581,9 +512,6 @@ class M_hitung_gaji extends CI_Model
 					'tanggal_bayar' => date('d-m-Y')
 				]);
 
-			/*
-			 * Update sisa dan status pinjaman.
-			 */
 			$data_master_pinjaman = [
 				'sisa_pinjaman' => $sisa_baru,
 				'status' => $sisa_baru == 0 ? 'Lunas' : 'Belum Lunas'
