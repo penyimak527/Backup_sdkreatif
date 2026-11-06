@@ -1,4 +1,5 @@
 <?php
+
 class M_jurnal_guru extends CI_Model
 {
 
@@ -33,7 +34,7 @@ class M_jurnal_guru extends CI_Model
 	{
 		$tanggal = $this->input->post('tanggal');
 		$id_kelas = $this->input->post('id_kelas');
-		$level = $this->session->userdata('admin')['level'];
+		$level = $this->session->userdata('admin');
 		$id_guru = $this->session->userdata('admin')['id_pegawai'];
 
 
@@ -43,12 +44,13 @@ class M_jurnal_guru extends CI_Model
 		$this->db->join('kelas', 'kelas.id = jurnal_guru.id_kelas');
 
 
-		if ($level === 'Admin') {
+		if ((is_array($level) && in_array('admin', array_map('strtolower', array_map('trim', (!empty($level['levels']) && is_array($level['levels']) ? $level['levels'] : explode(',', (string) ($level['level'] ?? ''))))), true))) {
 			if (!empty($tanggal)) {
 				$this->db->where('jurnal_guru.tanggal', $tanggal);
 			}
 			if (!empty($id_kelas)) {
-				$this->db->where('kelas_setting.id_kelas', $id_kelas);
+				// $this->db->where('kelas_setting.id_kelas', $id_kelas);
+				$this->db->where('jurnal_guru.id_kelas', $id_kelas);
 			}
 		} else {
 			$this->db->where('jurnal_guru.id_guru', $id_guru);

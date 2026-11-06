@@ -66,6 +66,12 @@
 </style>
 
 <body class="body">
+    <?php
+    $tahun_ajaran = $tahun_ajaran ?? '-';
+    $data_laporan = isset($data_laporan) && is_array($data_laporan) ? $data_laporan : [];
+    $grand_total = $grand_total ?? 0;
+    $tahun_ajaran_tidak_ada = trim((string) $tahun_ajaran) === '' || trim((string) $tahun_ajaran) === '-';
+    ?>
 
    <!-- KOP LAPORAN -->
 	<div class="judul">
@@ -97,7 +103,7 @@
         </thead>
         <tbody>
             <?php
-            if (!empty($data_laporan)):
+            if (!$tahun_ajaran_tidak_ada && !empty($data_laporan)):
                 $no = 1;
                 foreach ($data_laporan as $r):
                     $total_all = 0;
@@ -165,7 +171,7 @@
             <?php endif; ?>
         </tbody>
         <?php
-        if (!empty($data_laporan)): ?>
+        if (!$tahun_ajaran_tidak_ada && !empty($data_laporan)): ?>
             <tfoot>
                 <tr>
                     <td colspan="8" align="right">

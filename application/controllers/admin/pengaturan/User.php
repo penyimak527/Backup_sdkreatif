@@ -15,7 +15,7 @@ class User extends CI_Controller
 			redirect('/');
 		}
 
-		$data['level'] = $this->db->get('level')->result_array();
+		$data['level'] = $this->db->where('id !=', 8)->get('level')->result_array();
 		$data['pegawai'] = $this->db->get('pegawai')->result_array();
 		$data['title'] = 'User';
 		$this->load->view('template/header', $data);
@@ -28,10 +28,11 @@ class User extends CI_Controller
 		if ($this->session->userdata('admin')['username'] == null) {
 			redirect('/');
 		}
-		$user = $this->db->get_where('user', ['id' => $id_user])->row_array();
+		$user = $this->model->user_edit($id_user);
+		if (!$user) show_404();
 
 
-		$data['level'] = $this->db->get('level')->result_array();
+		$data['level'] = $this->db->where('id !=', 8)->get('level')->result_array();
 		$data['pegawai'] = $this->db->get('pegawai')->result_array();
 		$data['title'] = 'Pegawai';
 		$data['id_user'] = $id_user;
@@ -43,13 +44,14 @@ class User extends CI_Controller
 
 	public function user_result()
 	{
-		$data = $this->model->user_result();
+		$search = $this->input->post('search');
+		$data = $this->model->user_result($search);
 
 		echo json_encode($data);
 	}
 	public function user_edit()
-	{
-		$data = $this->model->user_edit();
+	{ $id_user = $this->input->post('id_user');
+		$data = $this->model->user_edit($id_user);
 
 		echo json_encode($data);
 	}

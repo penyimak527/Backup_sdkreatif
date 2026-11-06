@@ -72,9 +72,19 @@ class M_riwayat_presensi_pegawai extends CI_Model
                 'jam_terlambat' => $jam_terlambat
             ];
 
-            $this->db->insert('presensi_pegawai', $insert);
+            $insert_presensi = $this->db->insert('presensi_pegawai', $insert);
 
-            return ['status' => true, 'msg' => 'Presensi masuk berhasil'];
+            if (!$insert_presensi) {
+                return [
+                    'status' => false,
+                    'msg' => 'Presensi masuk gagal disimpan'
+                ];
+            }
+
+            return [
+                'status' => true,
+                'msg' => 'Presensi masuk berhasil'
+            ];
         }
 
         // PRESENSI PULANG
@@ -86,12 +96,15 @@ class M_riwayat_presensi_pegawai extends CI_Model
             $jam_pulang_ts = strtotime($jam_pulang);
 
             if ($jam_saatini_ts >= $jam_pulang_ts) {
-                $this->db
-                    ->where('id', $presensi['id'])
-                    ->update('presensi_pegawai', [
-                        'jam_pulang' => $waktu
-                    ]);
-                $response = [
+                $update_presensi = $this->db->where('id', $presensi['id'])->update('presensi_pegawai', ['jam_pulang' => $waktu]);
+                if (!$update_presensi) {
+                    return [
+                        'status' => false,
+                        'msg' => 'Presensi pulang gagal disimpan'
+                    ];
+                }
+
+                return [
                     'status' => true,
                     'msg' => 'Presensi pulang berhasil'
                 ];
@@ -168,9 +181,5 @@ class M_riwayat_presensi_pegawai extends CI_Model
         } else {
             return ['status' => false, 'data' => 'Tidak ada data'];
         }
-
     }
-
-
 }
-?>

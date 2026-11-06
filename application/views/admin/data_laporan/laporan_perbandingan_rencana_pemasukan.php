@@ -86,6 +86,12 @@
 </style>
 
 <body class="body">
+    <?php
+    $tahun_ajaran = $tahun_ajaran ?? '-';
+    $data_laporan = isset($data_laporan) && is_array($data_laporan) ? $data_laporan : [];
+    $bulan_laporan = isset($bulan_laporan) && is_array($bulan_laporan) ? $bulan_laporan : [];
+    $tahun_ajaran_tidak_ada = trim((string) $tahun_ajaran) === '' || trim((string) $tahun_ajaran) === '-';
+    ?>
     <center>
         <h5>Laporan Perbandingan Rencana Pemasukan</h5>
     </center>
@@ -150,6 +156,7 @@ foreach ($bulan_laporan as $b) {
             </tr>
         </thead>
         <tbody>
+            <?php if (!$tahun_ajaran_tidak_ada && !empty($data_laporan) && !empty($bulan_laporan)): ?>
             <?php foreach ($data_laporan as $row): ?>
                 <tr>
                     <td>
@@ -194,7 +201,13 @@ foreach ($bulan_laporan as $b) {
                     <?php endforeach; ?>
                 </tr>
             <?php endforeach; ?>
+            <?php else: ?>
+                <tr>
+                    <td colspan="<?= max(2, 2 + (count($bulan_laporan) * 4)) ?>" style="text-align: center;">Tidak ada data</td>
+                </tr>
+            <?php endif; ?>
         </tbody>
+        <?php if (!$tahun_ajaran_tidak_ada && !empty($data_laporan) && !empty($bulan_laporan)): ?>
         <tfoot>
             <tr>
                 <td>TOTAL</td>
@@ -215,6 +228,7 @@ foreach ($bulan_laporan as $b) {
                 <?php endforeach; ?>
             </tr>
         </tfoot>
+        <?php endif; ?>
     </table>
 
     <script>

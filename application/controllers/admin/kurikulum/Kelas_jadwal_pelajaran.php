@@ -6,7 +6,8 @@ class Kelas_jadwal_pelajaran extends CI_Controller
 	{
 		parent::__construct();
 		$this->load->model('admin/kurikulum/M_kelas_jadwal_pelajaran', 'model');
-
+		$this->load->library('web_guard');
+		$this->web_guard->enforce_login($this->router->fetch_method() !== 'index');
 	}
 
 	public function index()
@@ -29,12 +30,14 @@ class Kelas_jadwal_pelajaran extends CI_Controller
 	}
 	public function tambah()
 	{
+		$this->web_guard->enforce_csrf();
 		$data = $this->model->tambah();
 
 		echo json_encode($data);
 	}
 	public function edit()
 	{
+		$this->web_guard->enforce_csrf();
 		$data = $this->model->edit();
 
 		echo json_encode($data);
@@ -42,6 +45,7 @@ class Kelas_jadwal_pelajaran extends CI_Controller
 
 	public function hapus()
 	{
+		$this->web_guard->enforce_csrf();
 		$data = $this->model->hapus();
 
 		echo json_encode($data);

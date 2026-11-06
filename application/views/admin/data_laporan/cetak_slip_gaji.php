@@ -203,10 +203,18 @@ $bulan_nama = [
 
                         if (!empty($gaji['potongan_detail'])):
                             foreach ($gaji['potongan_detail'] as $potongan):
+                                $nama_potongan = $potongan['nama_potongan'];
+
+                                if (
+                                    strtolower(trim($potongan['nama_potongan'])) === 'lain-lain' &&
+                                    !empty($potongan['keterangan_potongan'])
+                                ) {
+                                    $nama_potongan .= ' (' . $potongan['keterangan_potongan'] . ')';
+                                }
                                 ?>
                                 <tr>
                                     <td class="text-center"><?= $no++ ?></td>
-                                    <td><?= strtoupper($potongan['nama_potongan']) ?></td>
+                                    <td><?= strtoupper($nama_potongan) ?></td>
                                     <td class="text-right">
                                         <?= number_format($potongan['nominal'], 0, ',', '.') ?>
                                     </td>

@@ -1,4 +1,5 @@
 <?php
+
 class M_jurnal_kegiatan extends CI_Model
 {
 
@@ -28,7 +29,7 @@ class M_jurnal_kegiatan extends CI_Model
 	public function riwayat_mengisi_result()
 	{
 		$tanggal = $this->input->post('tanggal');
-		$level = $this->session->userdata('admin')['level'];
+		$level = $this->session->userdata('admin');
 		$id_guru = $this->session->userdata('admin')['id_pegawai'];
 
 
@@ -37,7 +38,7 @@ class M_jurnal_kegiatan extends CI_Model
 		$this->db->where('jurnal_pegawai.status_approval !=', '0');
 
 
-		if ($level === 'Admin') {
+		if ((is_array($level) && in_array('admin', array_map('strtolower', array_map('trim', (!empty($level['levels']) && is_array($level['levels']) ? $level['levels'] : explode(',', (string) ($level['level'] ?? ''))))), true))) {
 			if (!empty($tanggal)) {
 				$this->db->where('jurnal_pegawai.tanggal', $tanggal);
 			}

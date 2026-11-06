@@ -1,4 +1,5 @@
 <?php
+
 class M_izin_pegawai extends CI_Model
 {
 
@@ -15,11 +16,11 @@ class M_izin_pegawai extends CI_Model
 		$search = $this->input->post('search');
 
 
-		$level = $this->session->userdata('admin')['level'];
+		$level = $this->session->userdata('admin');
 		if ($search != null) {
 			$this->db->like('nama_pegawai', $search);
 		}
-		if ($level == 'Admin') {
+		if ((is_array($level) && in_array('admin', array_map('strtolower', array_map('trim', (!empty($level['levels']) && is_array($level['levels']) ? $level['levels'] : explode(',', (string) ($level['level'] ?? ''))))), true))) {
 
 			$izin = $this->db->get('izin_pegawai')->result_array();
 		} else {

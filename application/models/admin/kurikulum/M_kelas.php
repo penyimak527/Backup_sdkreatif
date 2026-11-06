@@ -17,8 +17,10 @@ class M_kelas extends CI_Model
 		$search = $this->input->post('search');
 
 		if ($search != null) {
-			$this->db->like('nama_kelas', $search);
+			$this->db->group_start()->like('nama_kelas', $search)->or_like('kode_kelas', $search)->group_end();
 		}
+		if ($this->supports_soft_delete()) $this->db->where('deleted_at IS NULL', null, false);
+		$this->db->order_by('nama_kelas', 'ASC')->order_by('kode_kelas', 'ASC');
 		$tahun = $this->db->get('kelas')->result_array();
 
 
@@ -80,18 +82,44 @@ class M_kelas extends CI_Model
 
 		];
 
-		$response = $this->db->update('kelas', $data, ['id' => $id_kelas]);
+		$this->db->where('id', $id_kelas);
+		if ($this->supports_soft_delete()) $this->db->where('deleted_at IS NULL', null, false);
+		$response = $this->db->update('kelas', $data);
 
 		return $response;
 	}
 	public function hapus()
 	{
-		$id = $this->input->post('id');
+		if (!$this->supports_soft_delete()) return false;
+		$id = (int) $this->input->post('id');
+		return $this->db->where('id', $id)->where('deleted_at IS NULL', null, false)->update('kelas', [
+			'deleted_at' => date('Y-m-d H:i:s'), 'tanggal' => date('Y-m-d'), 'waktu' => date('H:i:s'),
+			'id_user' => $this->id_user, 'nama_user' => $this->nama_user,
+		]);
+	}
 
+	public function trash_result()
+	{
+		if (!$this->supports_soft_delete()) return [];
+		return $this->db
+			->select("k.id,k.nama_kelas,k.kode_kelas,k.deleted_at,k.nama_user,(SELECT COUNT(*) FROM kelas_setting ks WHERE CAST(ks.id_kelas AS UNSIGNED)=k.id) jumlah_setting,(SELECT COUNT(*) FROM kelas_jadwal_pelajaran jp WHERE jp.id_kelas=k.id) jumlah_jadwal", false)
+			->from('kelas k')->where('k.deleted_at IS NOT NULL', null, false)
+			->order_by('k.deleted_at', 'DESC')->get()->result_array();
+	}
 
-		$response = $this->db->delete('kelas', ['id' => $id]);
+	public function restore()
+	{
+		if (!$this->supports_soft_delete()) return false;
+		$id = (int) $this->input->post('id');
+		return $this->db->where('id', $id)->where('deleted_at IS NOT NULL', null, false)->update('kelas', [
+			'deleted_at' => null, 'tanggal' => date('Y-m-d'), 'waktu' => date('H:i:s'),
+			'id_user' => $this->id_user, 'nama_user' => $this->nama_user,
+		]);
+	}
 
-		return $response;
+	public function supports_soft_delete()
+	{
+		return $this->db->field_exists('deleted_at', 'kelas');
 	}
 
 }

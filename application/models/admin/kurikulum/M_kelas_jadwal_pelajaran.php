@@ -1,4 +1,5 @@
 <?php
+
 class M_kelas_jadwal_pelajaran extends CI_Model
 {
 
@@ -21,10 +22,10 @@ class M_kelas_jadwal_pelajaran extends CI_Model
 			$this->db->like('mapel', $search);
 			$this->db->or_like('nama_guru', $search);
 		}
-		$level = $this->session->userdata('admin')['level'];
+		$level = $this->session->userdata('admin');
 		$this->db->select('kelas_jadwal_pelajaran.*, kelas_setting.nama_kelas');
 		$this->db->join('kelas_setting', 'kelas_setting.id = kelas_jadwal_pelajaran.id_kelas_setting');
-		if ($level == 'Guru') {
+		if (((is_array($level) && in_array('guru', array_map('strtolower', array_map('trim', (!empty($level['levels']) && is_array($level['levels']) ? $level['levels'] : explode(',', (string) ($level['level'] ?? ''))))), true)) && !(is_array($level) && in_array('admin', array_map('strtolower', array_map('trim', (!empty($level['levels']) && is_array($level['levels']) ? $level['levels'] : explode(',', (string) ($level['level'] ?? ''))))), true)))) {
 			$this->db->where('kelas_jadwal_pelajaran.id_guru', $this->session->userdata('admin')['id_pegawai']);
 		}
 		$this->db->order_by('kelas_jadwal_pelajaran.jam_pelajaran_awal', 'ASC');
@@ -54,7 +55,7 @@ class M_kelas_jadwal_pelajaran extends CI_Model
 		$jam_saja = $selisih->h;
 
 		$data = [
-			'id_kelas_setting' => $kelas_setting['id'] ?? '',
+			'id_kelas_setting' => $kelas_setting['id'],
 			'id_mapel' => $mapel['id'] ?? '',
 			'mapel' => $mapel['mapel'] ?? '',
 			'id_guru' => $guru['id'] ?? '',

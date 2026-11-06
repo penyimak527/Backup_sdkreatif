@@ -15,7 +15,7 @@ class Pengeluaran extends CI_Controller
 			redirect('/');
 		}
         $data['kode_akun']  = $this->db->get_where('kode_akun', ['jenis' => 'Pengeluaran'])->result_array();
-        $data['fkode_akun']  = $this->db->get_where('kode_akun')->result_array();
+        $data['fkode_akun']  = $this->db->get_where('kode_akun', ['jenis' => 'Pemasukan'])->result_array();
         $data['kasbank']  = $this->db->get_where('kasbank')->result_array();
 		$data['title'] = 'Pengeluaran';
 		$this->load->view('template/header', $data);

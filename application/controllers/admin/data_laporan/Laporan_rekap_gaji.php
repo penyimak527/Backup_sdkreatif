@@ -30,6 +30,8 @@ class Laporan_rekap_gaji extends CI_Controller
         ) THEN 0
         ELSE 1
     END", 'ASC', false);
+     $this->db->order_by("STR_TO_DATE(a.tmt, '%d-%m-%Y')", 'ASC',false);
+         $this->db->order_by('a.no_urut', 'ASC');
         $pegawai = $this->db->get()->result_array();
         $master_potongan = $this->db->order_by('id', 'ASC')->get('master_potongan')->result_array();
         $potongan = [];
@@ -56,7 +58,7 @@ class Laporan_rekap_gaji extends CI_Controller
 
                 // isi yang ada nilainya
                 foreach ($potongan_detail as $pd) {
-                    $potongan[$pd['id']] = $pd['nominal'];
+                    $potongan[$pd['id']] += $pd['nominal'];
                 }
                 $result[] = [
                     'nama_pegawai' => $item['nama_pegawai'],

@@ -1,4 +1,5 @@
 <?php
+
 class M_agenda_tahunan extends CI_Model
 {
 
@@ -13,8 +14,8 @@ class M_agenda_tahunan extends CI_Model
 	{
 
 		$search = $this->input->post('search');
-		$level = $this->session->userdata('admin')['level'];
-		if ($level != 'Admin') {
+		$level = $this->session->userdata('admin');
+		if (!(is_array($level) && in_array('admin', array_map('strtolower', array_map('trim', (!empty($level['levels']) && is_array($level['levels']) ? $level['levels'] : explode(',', (string) ($level['level'] ?? ''))))), true))) {
 			$this->db->where('id_pegawai', $this->session->userdata('admin')['id_pegawai']);
 		}
 		if ($search != null) {
@@ -80,6 +81,7 @@ class M_agenda_tahunan extends CI_Model
 			'file' => $nama_file,
 			'id_pegawai' => $pegawai['id'] ?? '',
 			'pegawai' => $pegawai['nama_pegawai'] ?? '',
+			'penanggung_jawab' => $pegawai['nama_pegawai'] ?? '',
 		];
 
 		$response = $this->db->insert('agenda_tahunan', $data);
@@ -110,6 +112,7 @@ class M_agenda_tahunan extends CI_Model
 
 
 		$oldImage = $this->input->post('oldImage');
+		$remove_file = $this->input->post('remove_file');
 
 		$nama_file = $oldImage;
 		if (!empty($_FILES['file']['name'])) {
@@ -128,6 +131,12 @@ class M_agenda_tahunan extends CI_Model
 					unlink('./storage/agenda_tahunan/' . $oldImage);
 				}
 			}
+		} elseif ($remove_file == '1') {
+			if (!empty($oldImage) && $oldImage !== 'default.jpg' && file_exists('./storage/agenda_tahunan/' . $oldImage)) {
+				unlink('./storage/agenda_tahunan/' . $oldImage);
+			}
+
+			$nama_file = '';
 		}
 		$data = [
 
@@ -144,6 +153,7 @@ class M_agenda_tahunan extends CI_Model
 			'file' => $nama_file,
 			'id_pegawai' => $pegawai['id'],
 			'pegawai' => $pegawai['nama_pegawai'],
+			'penanggung_jawab' => $pegawai['nama_pegawai'],
 		];
 
 		$response = $this->db->update('agenda_tahunan', $data, ['id' => $id_agenda]);

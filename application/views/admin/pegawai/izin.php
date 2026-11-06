@@ -6,7 +6,8 @@
 
 	</div>
 	<div class="card-body">
-		<?php if ($this->session->userdata('admin')['level'] == 'Admin'): ?>
+		<?php
+ if ((is_array($this->session->userdata('admin')) && in_array('admin', array_map('strtolower', array_map('trim', (!empty($this->session->userdata('admin')['levels']) && is_array($this->session->userdata('admin')['levels']) ? $this->session->userdata('admin')['levels'] : explode(',', (string) ($this->session->userdata('admin')['level'] ?? ''))))), true))): ?>
 			<div class="row">
 				<div class="col-md-3">
 					<div class="mb-3">
@@ -52,7 +53,7 @@
 			<div class="modal-body">
 				<form id="form-tambah">
 
-					<?php if ($level == 'Admin'): ?>
+					<?php if ((is_array($this->session->userdata('admin')) && in_array('admin', array_map('strtolower', array_map('trim', (!empty($this->session->userdata('admin')['levels']) && is_array($this->session->userdata('admin')['levels']) ? $this->session->userdata('admin')['levels'] : explode(',', (string) ($this->session->userdata('admin')['level'] ?? ''))))), true))): ?>
 						<div class="mb-3">
 							<label for="pegawai" class="form-label">Nama Pegawai</label>
 							<select name="id_pegawai" class="form-control">

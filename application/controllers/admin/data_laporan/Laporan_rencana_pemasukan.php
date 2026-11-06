@@ -16,7 +16,19 @@ class Laporan_rencana_pemasukan extends CI_Controller
         // $tahun = $ambil['single_filter_tahun'];
         // $semester = $ambil['semester'];
         $semester = 'Tahunan';
-        $periode = $ambil['id_periode'];
+        $periode = $ambil['id_periode_form_semester'] ?? '';
+        if ($periode == '') {
+        $data = [
+            'judul' => '-',
+            'semester' => $semester,
+            'tahun_ajaran' => '-',
+            'data_laporan' => [],
+            'grand_total' => []
+        ];
+
+        $this->load->view('admin/data_laporan/laporan_rencana_pemasukan', $data);
+        return;
+    }
         $get_tahun_ajaran = $this->db->get_where('master_tahun_ajaran', ['id' => $periode])->row_array();
 
         // if ((int) $bulan >= 7) {

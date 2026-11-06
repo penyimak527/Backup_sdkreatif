@@ -2,7 +2,8 @@
 	<div class="card-header border-bottom border-dashed d-flex align-items-center justify-content-between">
 		<h4 class="header-title">Data <?= $title; ?></h4>
 		<div>
-			<?php if ($this->session->userdata('admin')['level'] != 'Admin'): ?>
+			<?php
+ if (!(is_array($this->session->userdata('admin')) && in_array('admin', array_map('strtolower', array_map('trim', (!empty($this->session->userdata('admin')['levels']) && is_array($this->session->userdata('admin')['levels']) ? $this->session->userdata('admin')['levels'] : explode(',', (string) ($this->session->userdata('admin')['level'] ?? ''))))), true))): ?>
 				<button type="button" class="btn btn-sm btn-outline-success mb-2" data-bs-toggle="modal"
 					data-bs-target="#upload">
 					<i class="ri-file-excel-2-line me-1"></i>
@@ -132,7 +133,7 @@
 			<div class="modal-body">
 				<form id="form-tambah">
 					<input type="hidden" name="id_kelas_setting">
-					<?php if ($level == 'Admin'): ?>
+					<?php if ((is_array($this->session->userdata('admin')) && in_array('admin', array_map('strtolower', array_map('trim', (!empty($this->session->userdata('admin')['levels']) && is_array($this->session->userdata('admin')['levels']) ? $this->session->userdata('admin')['levels'] : explode(',', (string) ($this->session->userdata('admin')['level'] ?? ''))))), true))): ?>
 						<div class="mb-2">
 							<label for="id_guru" class="form-label">Nama Guru</label>
 							<select id="guru-jadwal-pelajaran" name="id_guru" class="form-control">
@@ -210,7 +211,7 @@
 			<div class="modal-body">
 				<form id="form-edit">
 					<input type="hidden" name="id">
-					<?php if ($level == 'Admin'): ?>
+					<?php if ((is_array($this->session->userdata('admin')) && in_array('admin', array_map('strtolower', array_map('trim', (!empty($this->session->userdata('admin')['levels']) && is_array($this->session->userdata('admin')['levels']) ? $this->session->userdata('admin')['levels'] : explode(',', (string) ($this->session->userdata('admin')['level'] ?? ''))))), true))): ?>
 						<div class="mb-2">
 							<label for="id_guru" class="form-label">Nama Guru</label>
 							<select id="guru-jadwal-pelajaran" name="id_guru" class="form-control">

@@ -1,8 +1,8 @@
 <div class="card">
 	<div class="card-header border-bottom border-dashed d-flex align-items-center justify-content-between">
 		<h4 class="header-title">Data <?= $title; ?></h4>
-		<button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#tambah"><i
-				class="ri-add-line"></i>Tambah</button>
+		<div class="d-flex gap-2"><button type="button" class="btn btn-sm btn-outline-danger" id="btn-trash-kelas"><i class="ri-delete-bin-6-line"></i> Trash</button><button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#tambah"><i
+				class="ri-add-line"></i>Tambah</button></div>
 
 	</div>
 	<div class="card-body">
@@ -49,6 +49,7 @@
 			</div>
 			<div class="modal-body">
 				<form id="form-tambah">
+					<input type="hidden" name="web_csrf_token" value="<?= html_escape($csrf_token) ?>">
 					<div class="mb-2">
 						<label for="nama_kelas" class="form-label">Nama Kelas</label>
 						<input type="text" name="nama_kelas" class="form-control" placeholder="Nama Kelas ..." />
@@ -77,6 +78,7 @@
 			<div class="modal-body">
 				<form id="form-edit">
 					<input type="hidden" name="id_kelas">
+					<input type="hidden" name="web_csrf_token" value="<?= html_escape($csrf_token) ?>">
 					<div class="mb-2">
 						<label for="nama_kelas" class="form-label">Nama Kelas</label>
 						<input type="text" name="nama_kelas" class="form-control" />
@@ -96,9 +98,13 @@
 	</div>
 </div>
 
+<div class="modal fade" id="trash-kelas" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><div><h4 class="modal-title mb-0">Trash Kelas</h4><small class="text-muted">Kelas dapat dipulihkan tanpa menghapus relasi historis.</small></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div id="trash-kelas-list"></div></div><div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Tutup</button></div></div></div></div>
+
 
 
 <script>
+	const kelasCsrf = <?= json_encode($csrf_token) ?>;
+	const kelasSoftDeleteAvailable = <?= $soft_delete_available ? 'true' : 'false' ?>;
 	$(document).ready(function () {
 		kelas();
 		$("#btn-simpan").click(function () {
@@ -153,7 +159,28 @@
 			const jumlah = parseInt($(this).val());
 			paging($('#data_kelas .card-mapel'), jumlah);
 		});
+		$('#btn-trash-kelas').on('click', function () {
+			if (!kelasSoftDeleteAvailable) return Swal.fire('Migrasi belum diterapkan','Kolom deleted_at pada tabel kelas perlu disetujui dan dijalankan terlebih dahulu.','info');
+			loadTrashKelas();
+			$('#trash-kelas').modal('show');
+		});
 	})
+
+	function loadTrashKelas() {
+		$.post('<?= base_url('admin/kurikulum/kelas/trash') ?>', {}, function (data) {
+			let html = '';
+			(data || []).forEach(function (item, index) {
+				html += `<div class="card-mapel"><div class="keterangan-mapel"><div class="keterangan-mapel-kiri"><h5 class="judul-mapel mb-1">${index + 1}. Kelas ${item.nama_kelas}${item.kode_kelas ? ' ' + item.kode_kelas : ''}</h5><small class="text-muted">Dihapus ${item.deleted_at} · ${item.jumlah_setting} setting · ${item.jumlah_jadwal} jadwal</small></div><div class="keterangan-mapel-kanan"><button type="button" class="btn btn-sm btn-outline-success" onclick="restoreKelas(${item.id})" title="Pulihkan"><i class="ri-arrow-go-back-line"></i></button></div></div></div>`;
+			});
+			$('#trash-kelas-list').html(html || '<div class="text-center text-muted py-4">Trash kelas kosong.</div>');
+		}, 'json');
+	}
+
+	function restoreKelas(id) {
+		$.post('<?= base_url('admin/kurikulum/kelas/restore') ?>', {id, web_csrf_token: kelasCsrf}, function (data) {
+			if (data == true) { Swal.fire('Berhasil','Kelas berhasil dipulihkan.','success'); loadTrashKelas(); kelas(); }
+		}, 'json');
+	}
 
 	function kelas() {
 		var search = $("#cari-kelas").val();
@@ -256,7 +283,8 @@
 					url: `<?= base_url(); ?>admin/kurikulum/kelas/hapus`,
 					data: {
 						id,
-						id_kelas
+						id_kelas,
+						web_csrf_token: kelasCsrf
 					},
 					dataType: 'json',
 					success: function (data) {

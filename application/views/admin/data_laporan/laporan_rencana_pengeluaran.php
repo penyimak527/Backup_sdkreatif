@@ -68,6 +68,15 @@
 </style>
 
 <body class="body">
+    <?php
+    $tahun_ajaran = $tahun_ajaran ?? '-';
+    if (is_array($tahun_ajaran)) {
+        $tahun_ajaran = $tahun_ajaran['periode'] ?? '-';
+    }
+    $data_laporan = isset($data_laporan) && is_array($data_laporan) ? $data_laporan : [];
+    $list_bulan = isset($list_bulan) && is_array($list_bulan) ? $list_bulan : [];
+    $tahun_ajaran_tidak_ada = trim((string) $tahun_ajaran) === '' || trim((string) $tahun_ajaran) === '-';
+    ?>
 
     <!-- KOP LAPORAN -->
     <div class="judul">
@@ -119,6 +128,7 @@
                 $total_bulan[$bulan] = 0;
             }
 
+            if (!$tahun_ajaran_tidak_ada && !empty($data_laporan) && !empty($list_bulan)):
             foreach ($data_laporan as $r) {
                 $total_baris = 0;
                 ?>
@@ -141,8 +151,14 @@
                     </td>
                 </tr>
                 <?php $grand_total += $total_baris;
-            } ?>
+            }
+            else: ?>
+                <tr>
+                    <td colspan="<?= max(2, 2 + count($list_bulan)) ?>" style="text-align: center;">Tidak ada data</td>
+                </tr>
+            <?php endif; ?>
         </tbody>
+        <?php if (!$tahun_ajaran_tidak_ada && !empty($data_laporan) && !empty($list_bulan)): ?>
         <tfoot>
             <tr>
                 <td><b>Jumlah</b></td>
@@ -158,6 +174,7 @@
                 </td>
             </tr>
         </tfoot>
+        <?php endif; ?>
     </table>
 
     <script>

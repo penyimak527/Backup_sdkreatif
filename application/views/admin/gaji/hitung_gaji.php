@@ -103,6 +103,21 @@
                         </tr>
                     </thead>
                     <tbody></tbody>
+                    <tfoot>
+    <tr class="table-light fw-bold">
+        <td colspan="2" class="text-end">Total</td>
+
+        <td class="text-end" id="total_gaji_pokok">
+            Rp. 0
+        </td>
+
+        <td class="text-end" id="total_gaji_bersih">
+            Rp. 0
+        </td>
+
+        <td colspan="2"></td>
+    </tr>
+</tfoot>
                 </table>
             </div>
 
@@ -572,6 +587,8 @@
                 $('#pegawai').empty();
                 var no = 1;
                 var table = '';
+                let totalGajiPokok = 0;
+let totalGajiBersih = 0;
                 if (data.length == 0) {
                     table += `
                    <tr>
@@ -580,6 +597,8 @@
                 `;
                 } else {
                     data.forEach(function (item) {
+                        totalGajiPokok += parseFloat(item.gaji_pokok || 0);
+                        totalGajiBersih += parseFloat(item.gaji_bersih || 0);
                         let detail = btoa(JSON.stringify(item));
 
                         let status_penggajian = '';
@@ -604,6 +623,10 @@
                     });
                 }
                 $('#table_penggajian tbody').html(table);
+                $('#total_gaji_pokok').html('Rp. ' + NumberToMoney(totalGajiPokok));
+                $('#total_gaji_bersih').html(
+                    'Rp. ' + NumberToMoney(totalGajiBersih)
+                );
                 let jumlah_awal = parseInt($('#dt-length-0').val());
                 paging($('#table_penggajian tbody tr'), jumlah_awal);
             }
@@ -618,15 +641,12 @@
         var namaBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni",
             "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
-        // Ambil nama bulan
         var bulanIndex = parseInt(item.bulan) - 1;
         var bulanNama = namaBulan[bulanIndex] || item.bulan;
         $('#detail_bulan').html(bulanNama);
         $('#detail_tahun').html(item.tahun);
         $('#detail_hadir').html(item.jumlah_hadir);
         $('#detail_tidak_hadir').html(item.jumlah_tidak_hadir);
-        // $('#detail_ijin').html(item.jumlah_ijin);
-        // $('#detail_alfa').html(item.jumlah_alfa);
 
         let jumlahIzin = parseInt(item.jumlah_ijin ?? 0);
 let jumlahIzinPribadi = parseInt(item.jumlah_ijin_pribadi ?? 0);
@@ -653,10 +673,6 @@ $('#detail_hari_dipotong').html(jumlahHariDipotong);
         $('#detail_total_bonus').html('Rp. ' + NumberToMoney(item.total_bonus));
         $('#detail_total_pendapatan').html('Rp. ' + NumberToMoney(item.total_pendapatan));
 
-        // $('#detail_potongan_tidak_hadir').html(
-        //     'Rp. ' + NumberToMoney(item.potongan_tidak_hadir) +
-        //     ' <small class="text-muted">(' + (item.persen_potongan_tidak_hadir ?? '') + '% x '+ item.jumlah_alfa +' alfa)</small>'
-        // );
 $('#detail_potongan_tidak_hadir').html(
     '<div>Rp. ' + NumberToMoney(item.potongan_tidak_hadir) + '</div>' +
     '<small class="text-muted">' +
@@ -684,9 +700,18 @@ $('#detail_potongan_tidak_hadir').html(
         let htmlPotongan = '';
         if (item.potongan_detail != null) {
             item.potongan_detail.forEach(function (row) {
+                let namaPotongan = row.nama_potongan;
+
+                if (
+                    String(row.nama_potongan || '').trim().toLowerCase() === 'lain-lain' &&
+                    row.keterangan_potongan
+                ) {
+                    namaPotongan = row.nama_potongan + ' (' + row.keterangan_potongan + ')';
+                }
+
                 htmlPotongan += `
             <tr>
-                <td>${row.nama_potongan}</td>
+                <td>${namaPotongan}</td>
                 <td>Rp. ${NumberToMoney(row.nominal)}</td>
             </tr>
         `;
@@ -814,25 +839,19 @@ $('#detail_potongan_tidak_hadir').html(
     function batasiPersen(el) {
         let nilai = el.value;
 
-        // izinkan angka, koma, dan titik
         nilai = nilai.replace(/[^0-9,.]/g, '');
-
-        // ubah titik menjadi koma agar format input konsisten
         nilai = nilai.replace(/\./g, ',');
 
-        // hanya boleh ada 1 koma
         let parts = nilai.split(',');
         if (parts.length > 2) {
             nilai = parts[0] + ',' + parts.slice(1).join('');
         }
 
-        // batasi angka desimal maksimal 2 digit
         parts = nilai.split(',');
         if (parts.length === 2) {
             nilai = parts[0] + ',' + parts[1].substring(0, 2);
         }
 
-        // cek nilai angka untuk batas maksimal 100
         let angka = parseFloat(nilai.replace(',', '.')) || 0;
 
         if (angka > 100) {

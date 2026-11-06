@@ -26,29 +26,15 @@ class M_hitung_gaji extends CI_Model
 
 		$result = [];
 		foreach ($pegawai as $item) {
-			$jumlah_hadir = $this->db->query("SELECT COUNT(*) AS jumlah_hadir FROM presensi_pegawai WHERE id_pegawai = ? AND MONTH(STR_TO_DATE(tanggal, '%d-%m-%Y')) = ? AND YEAR(STR_TO_DATE(tanggal, '%d-%m-%Y')) = ?", array($item['id_pegawai'], $bulan, $tahun))->row()->jumlah_hadir;
+			$rekap_kehadiran = $this->hitung_izin_dan_alfa($item['id_pegawai'], $bulan, $tahun, $hari_kerja);
+			$jumlah_hadir = $rekap_kehadiran['jumlah_hadir'];
+			$jumlah_tidak_hadir = $rekap_kehadiran['jumlah_tidak_hadir'];
+			$jumlah_ijin = $rekap_kehadiran['jumlah_ijin'];
+			$jumlah_ijin_pribadi = $rekap_kehadiran['jumlah_ijin_pribadi'];
+			$jumlah_alfa = $rekap_kehadiran['jumlah_alfa'];
+			$jumlah_hari_dipotong = $rekap_kehadiran['jumlah_hari_dipotong'];
 
-			$jumlah_ijin = $this->db->query("SELECT COUNT(*) AS jumlah_ijin FROM izin_pegawai
-    		WHERE id_pegawai = ? AND status_approval = 1 AND MONTH(STR_TO_DATE(tgl_tidak_hadir, '%d-%m-%Y')) = ? 
-    		AND YEAR(STR_TO_DATE(tgl_tidak_hadir, '%d-%m-%Y')) = ?", [$item['id_pegawai'], $bulan, $tahun])->row()->jumlah_ijin;
-
-			$jumlah_ijin_pribadi = $this->db->query("SELECT COUNT(*) AS jumlah_ijin_pribadi
-			FROM izin_pegawai WHERE id_pegawai = ? AND status_approval = 1 AND id_master_izin = 1
-			AND MONTH(STR_TO_DATE(tgl_tidak_hadir, '%d-%m-%Y')) = ? AND YEAR(STR_TO_DATE(tgl_tidak_hadir, '%d-%m-%Y')) = ?", [$item['id_pegawai'], $bulan, $tahun])->row()->jumlah_ijin_pribadi;
-			
-			$jumlah_tidak_hadir = $hari_kerja - $jumlah_hadir;
-			if ($jumlah_tidak_hadir < 0) {
-				$jumlah_tidak_hadir = 0;
-			}
-			$jumlah_alfa = $jumlah_tidak_hadir - $jumlah_ijin;
-
-			if ($jumlah_alfa < 0) {
-				$jumlah_alfa = 0;
-			}
-
-			$jumlah_hari_dipotong = $jumlah_alfa + $jumlah_ijin_pribadi;
-
-			$potongan_detail = $this->db->query("SELECT mp.nama_potongan, ppd.nominal
+			$potongan_detail = $this->db->query("SELECT mp.nama_potongan, ppd.keterangan_potongan, ppd.nominal
 				FROM pegawai_potongan pp
 				JOIN pegawai_potongan_detail ppd ON pp.id = ppd.id_pegawai_potongan
 				JOIN master_potongan mp ON mp.id = ppd.id_master_potongan
@@ -102,7 +88,7 @@ class M_hitung_gaji extends CI_Model
 			$status_penggajian = $cek_penggajian ? 'Sudah Dihitung' : 'Belum Dihitung';
 
 			if ($cek_penggajian) {
-				$potongan_detail = $this->db->query("SELECT mp.nama_potongan, pp.nominal
+				$potongan_detail = $this->db->query("SELECT mp.nama_potongan, pp.keterangan_potongan, pp.nominal
         			FROM penggajian_potongan pp
         			JOIN master_potongan mp ON mp.id = pp.id_master_potongan
         			WHERE pp.id_penggajian = ? ", [$cek_penggajian['id']])->result_array();
@@ -193,7 +179,11 @@ class M_hitung_gaji extends CI_Model
 			return false;
 		}
 
-		return $this->proses_penggajian($id_pegawai, $bulan, $tahun);
+		$hasil = $this->proses_penggajian($id_pegawai, $bulan, $tahun);
+		if ($hasil === true) {
+			$this->tambah_riwayat_hitung_gaji('hitung_satu', $bulan, $tahun);
+		}
+		return $hasil;
 	}
 
 	public function hitung_semua()
@@ -206,15 +196,97 @@ class M_hitung_gaji extends CI_Model
 		}
 
 		$pegawai = $this->db->get('gaji')->result_array();
+		$semua_berhasil = true;
 		foreach ($pegawai as $p) {
-			$this->proses_penggajian(
+			$hasil = $this->proses_penggajian(
 				$p['id_pegawai'],
 				$bulan,
 				$tahun
 			);
+			if ($hasil !== true) {
+				$semua_berhasil = false;
+			}
 		}
-		return true;
+		if ($semua_berhasil === true) {
+			$this->tambah_riwayat_hitung_gaji('hitung_semua',$bulan,$tahun);
+		}
+		return $semua_berhasil;
 	}
+	private function tambah_riwayat_hitung_gaji($jenis_hitung,$bulan,$tahun) {
+			$id_pegawai = $this->session->userdata('admin')['id_pegawai'] ?? '';
+			$data = [
+			'id_pegawai' => $id_pegawai,
+			'jenis_hitung' => $jenis_hitung,
+			'bulan' => $bulan,
+			'tahun' => $tahun,
+			'tanggal' => date('d-m-Y'),
+			'waktu' => date('H:i:s')
+		];
+
+		return $this->db->insert(
+			'riwayat_hitung_gaji',
+			$data
+		);
+	}
+
+	/**
+	 * Hitung izin berdasarkan tanggal yang benar-benar tidak memiliki presensi.
+	 * Terlambat tidak mengurangi alfa; Pribadi tetap dipotong satu kali.
+	 */
+	private function hitung_izin_dan_alfa($id_pegawai, $bulan, $tahun, $hari_kerja)
+	{
+		$jumlah_hadir = (int) $this->db->query("SELECT COUNT(DISTINCT STR_TO_DATE(tanggal, '%d-%m-%Y')) AS jumlah_hadir
+			FROM presensi_pegawai WHERE id_pegawai = ?
+			AND MONTH(STR_TO_DATE(tanggal, '%d-%m-%Y')) = ?
+			AND YEAR(STR_TO_DATE(tanggal, '%d-%m-%Y')) = ?", [$id_pegawai, $bulan, $tahun])->row()->jumlah_hadir;
+
+		// Satu tanggal izin hanya dihitung sekali dan tidak boleh beririsan dengan tanggal hadir.
+		// id 1 = Pribadi, 2 = Sakit, 12 = Izin. id 13 = Terlambat tidak termasuk.
+		$izin_tanpa_presensi = $this->db->query("SELECT
+			MAX(CASE WHEN i.id_master_izin = 1 THEN 1 ELSE 0 END) AS izin_pribadi
+			FROM izin_pegawai i
+			WHERE i.id_pegawai = ? AND i.status_approval = 1
+			AND i.id_master_izin IN (1, 2, 12)
+			AND MONTH(STR_TO_DATE(i.tgl_tidak_hadir, '%d-%m-%Y')) = ?
+			AND YEAR(STR_TO_DATE(i.tgl_tidak_hadir, '%d-%m-%Y')) = ?
+			AND NOT EXISTS (
+				SELECT 1 FROM presensi_pegawai p
+				WHERE p.id_pegawai = i.id_pegawai
+				AND STR_TO_DATE(p.tanggal, '%d-%m-%Y') = STR_TO_DATE(i.tgl_tidak_hadir, '%d-%m-%Y')
+			)
+			GROUP BY STR_TO_DATE(i.tgl_tidak_hadir, '%d-%m-%Y')", [$id_pegawai, $bulan, $tahun])->result_array();
+
+		$jumlah_ijin_pribadi = 0;
+		$jumlah_ijin_tidak_dipotong = 0;
+		foreach ($izin_tanpa_presensi as $izin) {
+			if ((int) $izin['izin_pribadi'] === 1) {
+				$jumlah_ijin_pribadi++;
+			} else {
+				$jumlah_ijin_tidak_dipotong++;
+			}
+		}
+
+		$jumlah_tidak_hadir = max(0, (int) $hari_kerja - $jumlah_hadir);
+		// Izin tidak boleh melebihi selisih hari efektif dengan kehadiran.
+		$jumlah_ijin_pribadi = min($jumlah_ijin_pribadi, $jumlah_tidak_hadir);
+		$jumlah_ijin_tidak_dipotong = min(
+			$jumlah_ijin_tidak_dipotong,
+			$jumlah_tidak_hadir - $jumlah_ijin_pribadi
+		);
+		$jumlah_ijin = $jumlah_ijin_pribadi + $jumlah_ijin_tidak_dipotong;
+		$jumlah_alfa = $jumlah_tidak_hadir - $jumlah_ijin;
+		$jumlah_hari_dipotong = $jumlah_alfa + $jumlah_ijin_pribadi;
+
+		return [
+			'jumlah_hadir' => $jumlah_hadir,
+			'jumlah_tidak_hadir' => $jumlah_tidak_hadir,
+			'jumlah_ijin' => $jumlah_ijin,
+			'jumlah_ijin_pribadi' => $jumlah_ijin_pribadi,
+			'jumlah_alfa' => $jumlah_alfa,
+			'jumlah_hari_dipotong' => $jumlah_hari_dipotong
+		];
+	}
+
 	private function proses_penggajian($id_pegawai, $bulan, $tahun)
 	{
 		$hari_kerja = $this->get_hari_efektif($bulan, $tahun);
@@ -257,33 +329,13 @@ class M_hitung_gaji extends CI_Model
 		| Hitung presensi
 		|--------------------------------------------------------------------------
 		*/
-		$jumlah_hadir = $this->db->query("SELECT COUNT(*) AS jumlah_hadir
-		FROM presensi_pegawai WHERE id_pegawai = ? AND MONTH(STR_TO_DATE(tanggal, '%d-%m-%Y')) = ?
-		AND YEAR(STR_TO_DATE(tanggal, '%d-%m-%Y')) = ? ", [$id_pegawai, $bulan, $tahun])->row()->jumlah_hadir;
-
-		$jumlah_ijin = $this->db->query("SELECT COUNT(*) AS jumlah_ijin
-		FROM izin_pegawai WHERE id_pegawai = ? AND status_approval = 1
-		AND MONTH(STR_TO_DATE(tgl_tidak_hadir, '%d-%m-%Y')) = ?
-		AND YEAR(STR_TO_DATE(tgl_tidak_hadir, '%d-%m-%Y')) = ?", [$id_pegawai, $bulan, $tahun])->row()->jumlah_ijin;
-
-		$jumlah_ijin_pribadi = $this->db->query("SELECT COUNT(*) AS jumlah_ijin_pribadi FROM izin_pegawai
-			WHERE id_pegawai = ? AND status_approval = 1 AND id_master_izin = 1
-			AND MONTH(STR_TO_DATE(tgl_tidak_hadir, '%d-%m-%Y')) = ?
-			AND YEAR(STR_TO_DATE(tgl_tidak_hadir, '%d-%m-%Y')) = ?", [$id_pegawai, $bulan, $tahun])->row()->jumlah_ijin_pribadi;
-
-		$jumlah_tidak_hadir = $hari_kerja - $jumlah_hadir;
-
-		if ($jumlah_tidak_hadir < 0) {
-			$jumlah_tidak_hadir = 0;
-		}
-
-		$jumlah_alfa = $jumlah_tidak_hadir - $jumlah_ijin;
-
-		if ($jumlah_alfa < 0) {
-			$jumlah_alfa = 0;
-		}
-		
-		$jumlah_hari_dipotong = $jumlah_alfa + $jumlah_ijin_pribadi;
+		$rekap_kehadiran = $this->hitung_izin_dan_alfa($id_pegawai, $bulan, $tahun, $hari_kerja);
+		$jumlah_hadir = $rekap_kehadiran['jumlah_hadir'];
+		$jumlah_tidak_hadir = $rekap_kehadiran['jumlah_tidak_hadir'];
+		$jumlah_ijin = $rekap_kehadiran['jumlah_ijin'];
+		$jumlah_ijin_pribadi = $rekap_kehadiran['jumlah_ijin_pribadi'];
+		$jumlah_alfa = $rekap_kehadiran['jumlah_alfa'];
+		$jumlah_hari_dipotong = $rekap_kehadiran['jumlah_hari_dipotong'];
 		/*
 		|--------------------------------------------------------------------------
 		| Potongan tambahan pegawai
@@ -293,6 +345,7 @@ class M_hitung_gaji extends CI_Model
 		SELECT
 			mp.id AS id_master_potongan,
 			mp.nama_potongan,
+			ppd.keterangan_potongan,
 			ppd.nominal
 		FROM pegawai_potongan pp
 		JOIN pegawai_potongan_detail ppd
@@ -481,6 +534,7 @@ class M_hitung_gaji extends CI_Model
 			$this->db->insert('penggajian_potongan', [
 				'id_penggajian' => $id_penggajian,
 				'id_master_potongan' => $potongan['id_master_potongan'],
+				'keterangan_potongan' => $potongan['keterangan_potongan'] ?? null,
 				'nominal' => $potongan['nominal']
 			]);
 		}
@@ -497,7 +551,7 @@ class M_hitung_gaji extends CI_Model
 
 
 			$selisih_cicilan = $potongan_pinjaman - $cicilan_lama;
-			
+
 			$sisa_baru = $sisa_pinjaman - $selisih_cicilan;
 
 			if ($sisa_baru < 0) {
@@ -554,40 +608,79 @@ class M_hitung_gaji extends CI_Model
 	}
 
 	public function simpan_hari_efektif()
-	{
-		$bulan = trim((string) $this->input->post('bulan'));
-		$tahun = trim((string) $this->input->post('tahun'));
-		$hari_efektif = (int) $this->input->post('hari_efektif');
+{
+	$bulan = trim((string) $this->input->post('bulan'));
+	$tahun = trim((string) $this->input->post('tahun'));
+	$hari_efektif = (int) $this->input->post('hari_efektif');
 
-		if ($bulan === '' || $tahun === '' || $hari_efektif <= 0) {
-			return [
-				'status' => false,
-				'message' => 'Bulan, tahun, dan hari efektif wajib diisi'
-			];
-		}
-
-		$cek = $this->db->get_where('hari_efektif', [
-			'bulan' => $bulan,
-			'tahun' => $tahun
-		])->row_array();
-
-		$data = [
-			'bulan' => $bulan,
-			'tahun' => $tahun,
-			'hari_efektif' => $hari_efektif
-		];
-
-		if ($cek) {
-			$this->db->where('id', $cek['id'])->update('hari_efektif', $data);
-		} else {
-			$this->db->insert('hari_efektif', $data);
-		}
-
+	if ($bulan === '' || $tahun === '' || $hari_efektif <= 0) {
 		return [
-			'status' => $this->db->affected_rows() >= 0,
-			'message' => 'Hari efektif berhasil disimpan'
+			'status' => false,
+			'message' => 'Bulan, tahun, dan hari efektif wajib diisi'
 		];
 	}
+
+	$cek = $this->db->get_where('hari_efektif', [
+		'bulan' => $bulan,
+		'tahun' => $tahun
+	])->row_array();
+
+	$hari_efektif_sebelumnya = $cek
+		? (int) $cek['hari_efektif']
+		: 0;
+
+	$data = [
+		'bulan' => $bulan,
+		'tahun' => $tahun,
+		'hari_efektif' => $hari_efektif
+	];
+
+	$admin = $this->session->userdata('admin');
+	$id_pegawai_session = $admin['id_pegawai'] ?? null;
+
+	if (empty($id_pegawai_session)) {
+		return [
+			'status' => false,
+			'message' => 'Session pegawai tidak ditemukan'
+		];
+	}
+
+	$this->db->trans_begin();
+
+	if ($cek) {
+		$this->db
+			->where('id', $cek['id'])
+			->update('hari_efektif', $data);
+	} else {
+		$this->db->insert('hari_efektif', $data);
+	}
+
+	$this->db->insert('riwayat_hari_efektif', [
+		'id_pegawai' => (int) $id_pegawai_session,
+		'hari_efektif_sebelumnya' => $hari_efektif_sebelumnya,
+		'hari_efektif_diubah' => $hari_efektif,
+		'bulan' => $bulan,
+		'tahun'	=> $tahun,
+		'tanggal' => date('d-m-Y'),
+		'waktu' => date('H:i:s')
+	]);
+
+	if ($this->db->trans_status() === false) {
+		$this->db->trans_rollback();
+
+		return [
+			'status' => false,
+			'message' => 'Gagal menyimpan hari efektif'
+		];
+	}
+
+	$this->db->trans_commit();
+
+	return [
+		'status' => true,
+		'message' => 'Hari efektif berhasil disimpan'
+	];
+}
 
 	private function get_hari_efektif($bulan, $tahun)
 	{

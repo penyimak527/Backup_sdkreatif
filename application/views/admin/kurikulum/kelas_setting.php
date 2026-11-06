@@ -1,7 +1,8 @@
 <div class="card">
 	<div class="card-header border-bottom border-dashed d-flex align-items-center justify-content-between">
 		<h4 class="header-title">Data <?= $title; ?></h4>
-		<?php if ($level == 'Admin'): ?>
+		<?php
+ if ((is_array($this->session->userdata('admin')) && in_array('admin', array_map('strtolower', array_map('trim', (!empty($this->session->userdata('admin')['levels']) && is_array($this->session->userdata('admin')['levels']) ? $this->session->userdata('admin')['levels'] : explode(',', (string) ($this->session->userdata('admin')['level'] ?? ''))))), true))): ?>
 			<button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#tambah"><i
 					class="ri-add-line"></i>Tambah</button>
 		<?php endif; ?>
@@ -32,7 +33,7 @@
 						<th>Semester</th>
 						<th>Wali Kelas</th>
 						<th>Jadwal Mengajar</th>
-						<?php if ($level == 'Admin'): ?>
+						<?php if ((is_array($this->session->userdata('admin')) && in_array('admin', array_map('strtolower', array_map('trim', (!empty($this->session->userdata('admin')['levels']) && is_array($this->session->userdata('admin')['levels']) ? $this->session->userdata('admin')['levels'] : explode(',', (string) ($this->session->userdata('admin')['level'] ?? ''))))), true))): ?>
 							<th>Aksi</th>
 						<?php endif; ?>
 					</tr>
@@ -75,7 +76,7 @@
 					</div>
 					<div class="mb-2">
 						<label for="id_guru" class="form-label">Wali Kelas</label>
-						<select name="id_guru" class="form-control">
+						<select name="id_guru" class="form-select wali-kelas-select" required>
 						</select>
 					</div>
 					<div class="mb-2">
@@ -117,7 +118,7 @@
 					</div>
 					<div class="mb-2">
 						<label for="id_guru" class="form-label">Wali Kelas</label>
-						<select name="id_guru" class="form-control">
+						<select name="id_guru" class="form-select wali-kelas-select" required>
 						</select>
 					</div>
 					<div class="mb-2">
@@ -181,7 +182,6 @@
 								<th>Jam Awal</th>
 								<th>Jam Akhir</th>
 								<th>Hari</th>
-								<th>Ruangan</th>
 								<th>Aksi</th>
 							</tr>
 						</thead>
@@ -223,7 +223,11 @@
 			<div class="modal-body">
 				<form id="form-tambah-jadwal-pelajaran">
 					<input type="hidden" name="id_kelas_setting">
-					<?php if ($level == 'Admin'): ?>
+					<input type="hidden" name="id_kelas">
+					<input type="hidden" name="id_periode">
+					<input type="hidden" name="semester">
+					<input type="hidden" name="web_csrf_token" value="<?= html_escape($csrf_token) ?>">
+					<?php if ((is_array($this->session->userdata('admin')) && in_array('admin', array_map('strtolower', array_map('trim', (!empty($this->session->userdata('admin')['levels']) && is_array($this->session->userdata('admin')['levels']) ? $this->session->userdata('admin')['levels'] : explode(',', (string) ($this->session->userdata('admin')['level'] ?? ''))))), true))): ?>
 						<div class="mb-2">
 							<label for="id_guru" class="form-label">Nama Guru</label>
 							<select id="guru-jadwal-pelajaran" name="id_guru" class="form-control">
@@ -261,10 +265,6 @@
 							<option value="Sabtu">Sabtu</option>
 						</select>
 					</div>
-					<!-- <div class="mb-2">
-						<label for="ruangan" class="form-label">Ruangan</label>
-						<input type="text" name="ruangan" class="form-control" placeholder="Ruangan ..." />
-					</div> -->
 				</form>
 			</div>
 			<div class=" modal-footer">
@@ -286,8 +286,12 @@
 			</div>
 			<div class="modal-body">
 				<form id="form-edit-jadwal-pelajaran">
-					<input type="hidden" name="id_jadwal_pelajaran">
 					<input type="hidden" name="id_kelas_setting">
+					<input type="hidden" name="id_jadwal_pelajaran">
+					<input type="hidden" name="id_kelas">
+					<input type="hidden" name="id_periode">
+					<input type="hidden" name="semester">
+					<input type="hidden" name="web_csrf_token" value="<?= html_escape($csrf_token) ?>">
 					<div class="mb-2">
 						<label for="id_guru" class="form-label">Nama Guru</label>
 						<select id="guru-jadwal-pelajaran" name="id_guru" class="form-control">
@@ -313,10 +317,6 @@
 
 						</select>
 					</div>
-					<!-- <div class="mb-2">
-						<label for="ruangan" class="form-label">Ruangan</label>
-						<input type="text" name="ruangan" class="form-control" />
-					</div> -->
 				</form>
 			</div>
 			<div class=" modal-footer">
@@ -331,13 +331,20 @@
 
 
 <script>
+	const kelasJadwalCsrf = <?= json_encode($csrf_token) ?>;
+	let jadwalContext = {id_kelas_setting: '', id_kelas: '', id_periode: '', semester: ''};
 	$(document).ready(function () {
 		kelas_setting();
 		kelas();
 		periode();
 		guru();
+		$('#tambah select[name="id_guru"]').select2({width:'100%',dropdownParent:$('#tambah'),placeholder:'Pilih wali kelas'});
+		$('#edit select[name="id_guru"]').select2({width:'100%',dropdownParent:$('#edit'),placeholder:'Pilih wali kelas'});
+		$('#tambah select[name="id_kelas"]').select2({width:'100%',dropdownParent:$('#tambah'),placeholder:'Pilih kelas'});
+		$('#edit select[name="id_kelas"]').select2({width:'100%',dropdownParent:$('#edit'),placeholder:'Pilih kelas'});
 		kelas_jadwal_pelajaran();
 		$("#btn-simpan").click(function () {
+			if(!$('#tambah select[name="id_guru"]').val()){Swal.fire('Wali kelas belum dipilih','Pilih wali kelas dari data guru.','warning');return;}
 			$('#btn-simpan').prop('disabled', true);
 			$('#btn-simpan').text('Sedang Diproses');
 			var form = $("#form-tambah");
@@ -356,7 +363,7 @@
 							text: 'Data berhasil disimpan',
 						})
 						kelas_setting();
-						$("#form-tambah")[0].reset();
+						resetFormTambahKelasSetting();
 						$('#btn-simpan').prop('disabled', false);
 						$('#btn-simpan').text('Simpan');
 					}
@@ -364,6 +371,7 @@
 			})
 		})
 		$("#btn-update").click(function () {
+			if(!$('#edit select[name="id_guru"]').val()){Swal.fire('Wali kelas belum dipilih','Pilih wali kelas dari data guru.','warning');return;}
 			var form = $("#form-edit");
 			var data = form.serialize();
 			$.ajax({
@@ -403,7 +411,13 @@
 							title: 'Berhasil',
 							text: 'Data berhasil diupdate',
 						})
-						kelas_jadwal_pelajaran(data.id_jadwal);
+						setJadwalContext(
+							data.id_jadwal,
+							jadwalContext.id_kelas,
+							jadwalContext.id_periode,
+							jadwalContext.semester
+						);
+						kelas_jadwal_pelajaran();
 						$("#view-jadwal").modal('show');
 					}
 				}
@@ -429,8 +443,20 @@
 							title: 'Berhasil',
 							text: 'Data berhasil diupdate',
 						})
-						kelas_jadwal_pelajaran(data.id_jadwal);
+						setJadwalContext(
+							data.id_jadwal,
+							jadwalContext.id_kelas,
+							jadwalContext.id_periode,
+							jadwalContext.semester
+						);
+						kelas_jadwal_pelajaran();
 						$('#form-tambah-jadwal-pelajaran')[0].reset();
+						setJadwalContext(
+							data.id_jadwal,
+							jadwalContext.id_kelas,
+							jadwalContext.id_periode,
+							jadwalContext.semester
+						);
 						$('#btn-simpan-jadwal-pelajaran').prop('disabled', false);
 						$('#btn-simpan-jadwal-pelajaran').text('Simpan');
 						$("#view-jadwal").modal('show');
@@ -447,7 +473,16 @@
 			paging($('#table-jadwal-pelajaran tbody tr'), jumlah);
 		});
 	})
-
+function resetFormTambahKelasSetting() {
+    const form = $('#form-tambah')[0];
+    if (form) {
+        form.reset();
+    }
+    $('#tambah select[name="id_kelas"]').val('').trigger('change');
+    $('#tambah select[name="id_guru"]').val('').trigger('change');
+    $('#tambah select[name="semester"]').val('');
+    periode();
+}
 	function kelas_setting() {
 		var search = $("#cari-kelas-setting").val();
 		$.ajax({
@@ -489,7 +524,7 @@
 							<td>${item.periode}</td> 
 							<td>${item.semester}</td> 
 							<td>${item.wali_kelas ?? ''}</td> 
-							<td style="text-align: center;"><button type="button" class="btn btn-sm btn-outline-primary " onclick="viewJadwal(${item.id})"><i class="ri-eye-line"></i></button></td> 
+							<td style="text-align: center;"><button type="button" class="btn btn-sm btn-outline-primary " onclick="viewJadwal('${detail}')"><i class="ri-eye-line"></i></button></td> 
 							${aksi}
 						</tr>
 						`;
@@ -516,15 +551,39 @@
 			`
 		)
 	}
-	function viewJadwal(id_jadwal) {
+	// function setJadwalContext(id_kelas, id_periode, semester) {
+	// 	jadwalContext = {id_kelas: String(id_kelas || ''), id_periode: String(id_periode || ''), semester: String(semester || '')};
+	// 	$('#form-tambah-jadwal-pelajaran input[name="id_kelas"], #form-edit-jadwal-pelajaran input[name="id_kelas"]').val(jadwalContext.id_kelas);
+	// 	$('#form-tambah-jadwal-pelajaran input[name="id_periode"], #form-edit-jadwal-pelajaran input[name="id_periode"]').val(jadwalContext.id_periode);
+	// 	$('#form-tambah-jadwal-pelajaran input[name="semester"], #form-edit-jadwal-pelajaran input[name="semester"]').val(jadwalContext.semester);
+	// }
+
+	function setJadwalContext(id_kelas_setting, id_kelas, id_periode, semester) {
+    jadwalContext = {
+        id_kelas_setting: String(id_kelas_setting || ''),
+        id_kelas: String(id_kelas || ''),
+        id_periode: String(id_periode || ''),
+        semester: String(semester || '')
+    };
+
+    $('#form-tambah-jadwal-pelajaran input[name="id_kelas_setting"], #form-edit-jadwal-pelajaran input[name="id_kelas_setting"]').val(jadwalContext.id_kelas_setting);
+    $('#form-tambah-jadwal-pelajaran input[name="id_kelas"], #form-edit-jadwal-pelajaran input[name="id_kelas"]').val(jadwalContext.id_kelas);
+    $('#form-tambah-jadwal-pelajaran input[name="id_periode"], #form-edit-jadwal-pelajaran input[name="id_periode"]').val(jadwalContext.id_periode);
+    $('#form-tambah-jadwal-pelajaran input[name="semester"], #form-edit-jadwal-pelajaran input[name="semester"]').val(jadwalContext.semester);
+}
+
+	function viewJadwal(detail) {
+		const item = JSON.parse(atob(detail));
+		setJadwalContext(item.id, item.id_kelas, item.id_periode, item.semester);
+		$('#cari-kelas-jadwal-pelajaran').val('');
 		$('#view-jadwal').modal('show');
-		kelas_jadwal_pelajaran(id_jadwal);
-		$("#tambah-jadwal-pelajaran input[name='id_kelas_setting']").val(id_jadwal);
+		kelas_jadwal_pelajaran();
 		mapel();
 
 	}
 
 	function tambah_jadwal_pelajaran() {
+		setJadwalContext(  jadwalContext.id_kelas_setting, jadwalContext.id_kelas, jadwalContext.id_periode, jadwalContext.semester);
 		$('#view-jadwal').modal('hide');
 		$('#tambah-jadwal-pelajaran').modal('show');
 		guru_jadwal();
@@ -613,7 +672,7 @@
 			}
 		})
 	}
-	function hapus_jadwal_pelajaran(id, id_kelas_setting) {
+	function hapus_jadwal_pelajaran(id) {
 		Swal.fire({
 			title: 'Hapus Data',
 			text: 'Anda yakin ingin menghapus data ini?',
@@ -630,7 +689,8 @@
 					url: `<?= base_url(); ?>admin/kurikulum/kelas_jadwal_pelajaran/hapus`,
 					data: {
 						id,
-						id_kelas_setting
+						id_kelas_setting: jadwalContext.id_kelas_setting,
+						web_csrf_token: kelasJadwalCsrf
 					},
 					dataType: 'json',
 					success: function (data) {
@@ -641,7 +701,7 @@
 								text: 'Data berhasil dihapus',
 							})
 
-							kelas_jadwal_pelajaran(data.id_jadwal);
+							kelas_jadwal_pelajaran();
 
 						}
 
@@ -666,7 +726,7 @@
 					data.forEach(function (item) {
 
 						option += `
-						<option value="${item.id}" ${item.id == id_kelas ? 'selected' : ''}>${item.nama_kelas}</option>
+						<option value="${item.id}" ${item.id == id_kelas ? 'selected' : ''}>${item.nama_kelas}${item.kode_kelas ? ' ' + item.kode_kelas : ''}</option>
 						`;
 					});
 				}
@@ -805,15 +865,18 @@
 		});
 	}
 
-	function kelas_jadwal_pelajaran(id_jadwal) {
+	function kelas_jadwal_pelajaran() {
 		var search = $("#cari-kelas-jadwal-pelajaran").val();
-		console.log(search);
+		if (!jadwalContext.id_kelas || !jadwalContext.id_periode || !jadwalContext.semester) {
+			$('#table-jadwal-pelajaran tbody').html('<tr><td colspan="8" class="text-center">Pilih kelas untuk melihat jadwal.</td></tr>');
+			return;
+		}
 		$.ajax({
 			url: '<?= base_url('admin/kurikulum/kelas_jadwal_pelajaran/kelas_jadwal_pelajaran_result'); ?>',
 			type: 'POST',
 			data: {
 				search,
-				id_jadwal
+				id_jadwal: jadwalContext.id_kelas_setting
 			},
 			dataType: 'JSON',
 			success: function (data) {
@@ -823,7 +886,7 @@
 				if (data.length == 0) {
 					table += `
 					<tr>
-						<td colspan="9" style="text-align: center;">Tidak ada data</td>
+						<td colspan="8" style="text-align: center;">Tidak ada data</td>
 					</tr>
 				`;
 				} else {
@@ -838,10 +901,9 @@
 							<td>${item.jam_pelajaran_awal}</td> 
 							<td>${item.jam_pelajaran_akhir}</td> 
 							<td>${item.hari}</td> 
-							<td>${item.ruangan}</td> 
 							<td>  
 								<button type="button" class="btn btn-sm btn-outline-warning " onclick="editJadwalPelajaran('${detail}')"><i class="ri-edit-2-line"></i></button>
-								<button type="button" class="btn btn-sm btn-outline-danger" onclick="hapus_jadwal_pelajaran(${item.id},${item.id_kelas_setting})"><i class="ri-delete-bin-line"></i></button> 
+								<button type="button" class="btn btn-sm btn-outline-danger" onclick="hapus_jadwal_pelajaran(${item.id})"><i class="ri-delete-bin-line"></i></button> 
 							</td>
 						</tr>
 						`;
@@ -875,8 +937,12 @@
 		);
 		$('#edit-jadwal-pelajaran input[name="jam_pelajaran_awal"]').val(item.jam_pelajaran_awal);
 		$('#edit-jadwal-pelajaran input[name="jam_pelajaran_akhir"]').val(item.jam_pelajaran_akhir);
-		$('#edit-jadwal-pelajaran input[name="ruangan"]').val(item.ruangan);
-		$('#edit-jadwal-pelajaran input[name="id_kelas_setting"]').val(item.id_kelas_setting);
+		setJadwalContext(
+			item.id_kelas_setting,
+			jadwalContext.id_kelas,
+			jadwalContext.id_periode,
+			jadwalContext.semester
+		);
 	}
 
 	function formatTimeInput(inputElement) {

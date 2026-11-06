@@ -8,7 +8,7 @@
 		<form id="form-edit" enctype="multipart/form-data">
 			<input type="hidden" id="id_user" name="id_user" value="<?= $id_user; ?>">
 			<div class="mb-3">
-				<label for="id_user" class="form-label">Nama Pegawair</label>
+				<label for="id_user" class="form-label">Nama Pegawai</label>
 				<select name="id_pegawai" class="form-control" data-choices name="choices-single-default"
 					id="choices-single-default">
 					<option value="">Pilih Pegawai</option>
@@ -22,10 +22,10 @@
 			</div>
 			<div class="mb-3">
 				<label for="id_user" class="form-label">Level</label>
-				<select name="id_level" class="select2 form-control select2-multiple" data-toggle="select2"
-					multiple="multiple" data-placeholder="Choose ...">
+				<select name="id_level[]" class="select2 form-control select2-multiple" data-toggle="select2"
+					multiple="multiple" data-placeholder="Pilih Level">
 					<?php foreach ($level as $l): ?>
-						<option value="<?= $l['id']; ?>" <?= $l['id'] == $user['id_level'] ? 'selected' : ''; ?>>
+						<option value="<?= $l['id']; ?>" <?= in_array((int) $l['id'], array_map('intval', explode(',', (string) $user['id_level'])), true) ? 'selected' : ''; ?>>
 							<?= $l['level']; ?>
 						</option>
 					<?php endforeach; ?>

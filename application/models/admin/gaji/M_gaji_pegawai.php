@@ -121,25 +121,30 @@ class M_gaji_pegawai extends CI_Model
         return $response;
     }
 
-    public function gaji_pokok()
+  public function gaji_pokok()
     {
         $pegawai = $this->db->get_where('pegawai')->result_array();
         $max = $this->db->select_max('angkatan')->get('master_angkatan')->row_array();
         $gaji_terendah_get = $this->db->get('setting_gaji')->row_array();
         $this->db->trans_begin();
         foreach ($pegawai as $key => $lspegawai) {
-            $angkatan = $this->db->where('angkatan', $lspegawai['angkatan'])->get('master_angkatan')->row_array();
+            $angkatan = $this->get_angkatan_berdasarkan_tmt($lspegawai['tmt']);
             if (!$angkatan) {
                 continue;
             }
-            $selisih = $max['angkatan'] - $lspegawai['angkatan'];
-
-            $gaji_pokok = $gaji_terendah_get['gaji_terendah'] + ($selisih * $angkatan['kenaikan_gaji']);
+            $total_kenaikan = $this->hitung_total_kenaikan_angkatan($angkatan['angkatan'], $max['angkatan']);
+            $gaji_pokok = (int) $gaji_terendah_get['gaji_terendah'] + $total_kenaikan;
             $cek_gaji = $this->db->get_where('gaji', ['id_pegawai' => $lspegawai['id']])->row_array();
             if (!$cek_gaji) {
                 continue;
             }
             $total_pendapatan = $gaji_pokok + $cek_gaji['struktural'] + $cek_gaji['tunjangan_pendidikan'] + $cek_gaji['wali_kelas'];
+            if ($lspegawai['angkatan'] != $angkatan['angkatan']) {
+                $this->db->where('id', $lspegawai['id']);
+                $this->db->update('pegawai', [
+                    'angkatan' => $angkatan['angkatan']
+                ]);
+            }
             $this->db->where('id_pegawai', $lspegawai['id']);
             $this->db->update('gaji', [
                 'gaji_pokok' => $gaji_pokok,
@@ -170,19 +175,24 @@ class M_gaji_pegawai extends CI_Model
         $max = $this->db->select_max('angkatan')->get('master_angkatan')->row_array();
         $pegawai = $this->db->get('pegawai')->result_array();
         foreach ($pegawai as $p) {
-            $angkatan = $this->db->where('angkatan', $p['angkatan'])->get('master_angkatan')->row_array();
+            $angkatan = $this->get_angkatan_berdasarkan_tmt($p['tmt']);
             if (!$angkatan) {
                 continue;
             }
-            $selisih = $max['angkatan'] - $p['angkatan'];
-
-            $gaji_pokok = $gaji_terendah + ($selisih * $angkatan['kenaikan_gaji']);
+            $total_kenaikan = $this->hitung_total_kenaikan_angkatan($angkatan['angkatan'], $max['angkatan']);
+            $gaji_pokok = (int) $gaji_terendah + $total_kenaikan;
             $cek_gaji = $this->db->get_where('gaji', ['id_pegawai' => $p['id']])->row_array();
             if (!$cek_gaji) {
                 continue;
             }
             $total_pendapatan = $gaji_pokok + $cek_gaji['struktural'] + $cek_gaji['tunjangan_pendidikan'] + $cek_gaji['wali_kelas'];
 
+            if ($p['angkatan'] != $angkatan['angkatan']) {
+                $this->db->where('id', $p['id']);
+                $this->db->update('pegawai', [
+                    'angkatan' => $angkatan['angkatan']
+                ]);
+            }
             $this->db->where('id_pegawai', $p['id']);
             $this->db->update('gaji', [
                 'gaji_pokok' => $gaji_pokok,
@@ -196,20 +206,120 @@ class M_gaji_pegawai extends CI_Model
         $id_pegawai = $this->input->post('id_pegawai');
         // pegawai
         $pegawai = $this->db->where('id', $id_pegawai)->get('pegawai')->row();
-        if (empty($pegawai->angkatan)) {
+        if (!$pegawai || empty($pegawai->tmt)) {
             return 0;
         }
         // setting gaji
         $setting = $this->db->get('setting_gaji')->row();
         $max = $this->db->select_max('angkatan')->get('master_angkatan')->row();
 
-        $angkatan = $this->db->where('angkatan', $pegawai->angkatan)->get('master_angkatan')->row();
+        $angkatan = $this->get_angkatan_berdasarkan_tmt($pegawai->tmt);
         if (!$angkatan) {
             return 0;
         }
-        $selisih = $max->angkatan - $pegawai->angkatan;
-        $gaji = $setting->gaji_terendah + ($selisih * $angkatan->kenaikan_gaji);
+        if ($pegawai->angkatan != $angkatan['angkatan']) {
+            $this->db->where('id', $pegawai->id);
+            $this->db->update('pegawai', [
+                'angkatan' => $angkatan['angkatan']
+            ]);
+        }
+        $total_kenaikan = $this->hitung_total_kenaikan_angkatan($angkatan['angkatan'], $max->angkatan);
+        $gaji = (int) $setting->gaji_terendah + $total_kenaikan;
         return $gaji;
+    }
+
+    // private function hitung_total_kenaikan_angkatan($angkatan_pegawai, $angkatan_tertinggi)
+    // {
+    //     $angkatan_pegawai = (int) $angkatan_pegawai;
+    //     $angkatan_tertinggi = (int) $angkatan_tertinggi;
+
+    //     if ($angkatan_pegawai >= $angkatan_tertinggi) {
+    //         return 0;
+    //     }
+
+    //     $total = $this->db
+    //         ->select('SUM(CAST(kenaikan_gaji AS UNSIGNED)) AS total_kenaikan', false)
+    //         ->where('CAST(angkatan AS UNSIGNED) >=', $angkatan_pegawai)
+    //         ->where('CAST(angkatan AS UNSIGNED) <', $angkatan_tertinggi)
+    //         ->get('master_angkatan')
+    //         ->row_array();
+
+    //     return (int) ($total['total_kenaikan'] ?? 0);
+    // }
+
+       private function hitung_total_kenaikan_angkatan(
+    $angkatan_pegawai,
+    $angkatan_tertinggi
+) {
+    $angkatan_pegawai = (int) $angkatan_pegawai;
+    $angkatan_tertinggi = (int) $angkatan_tertinggi;
+
+    if ($angkatan_pegawai >= $angkatan_tertinggi) {
+        return 0;
+    }
+
+    /*
+     * Gaji terendah dimiliki angkatan tertinggi.
+     *
+     * Untuk menghitung gaji angkatan yang lebih lama,
+     * jumlahkan kenaikan dari angkatan setelah pegawai
+     * sampai angkatan tertinggi.
+     *
+     * Contoh:
+     * Pegawai angkatan 8, tertinggi 9
+     * yang diambil adalah kenaikan angkatan 9.
+     */
+    $total = $this->db
+        ->select(
+            'SUM(CAST(kenaikan_gaji AS UNSIGNED)) AS total_kenaikan',
+            false
+        )
+        ->where(
+            'CAST(angkatan AS UNSIGNED) >',
+            $angkatan_pegawai
+        )
+        ->where(
+            'CAST(angkatan AS UNSIGNED) <=',
+            $angkatan_tertinggi
+        )
+        ->get('master_angkatan')
+        ->row_array();
+
+    return (int) ($total['total_kenaikan'] ?? 0);
+}
+
+    private function get_angkatan_berdasarkan_tmt($tmt)
+    {
+        $tahun_tmt = $this->get_tahun_tmt($tmt);
+        if (!$tahun_tmt) {
+            return null;
+        }
+
+        return $this->db
+            ->where('tahun_awal <=', $tahun_tmt)
+            ->where('tahun_akhir >=', $tahun_tmt)
+            ->order_by('tahun_awal', 'ASC')
+            ->get('master_angkatan')
+            ->row_array();
+    }
+
+    private function get_tahun_tmt($tmt)
+    {
+        if (empty($tmt)) {
+            return null;
+        }
+
+        $tanggal = DateTime::createFromFormat('d-m-Y', $tmt);
+        if ($tanggal) {
+            return (int) $tanggal->format('Y');
+        }
+
+        $timestamp = strtotime($tmt);
+        if (!$timestamp) {
+            return null;
+        }
+
+        return (int) date('Y', $timestamp);
     }
     public function edit()
     {

@@ -463,6 +463,61 @@
 <script src="<?= base_url(); ?>assets/js/helper.js"></script>
 <script src="<?= base_url(); ?>assets/js/js-form.js"></script>
 <script src="<?= base_url(); ?>assets/vendor/select2/js/select2.min.js"></script>
+<script>
+	(function ($) {
+		function digits(value) {
+			return String(value == null ? '' : value).replace(/[^0-9]/g, '');
+		}
+		function format(value) {
+			const raw = digits(value);
+			return raw === '' ? '' : new Intl.NumberFormat('id-ID').format(Number(raw));
+		}
+		window.SDKreatifMoney = { parse: value => Number(digits(value) || 0), format: format };
+		window.SDKreatifUI = {
+			statusBadge: function (value) {
+				const status = String(value == null ? '' : value).trim().toUpperCase();
+				const colors = {AKTIF:'bg-success',BERHASIL:'bg-success',DIVERIFIKASI:'bg-success',DISETUJUI:'bg-success',SELESAI:'bg-success',NONAKTIF:'bg-secondary',DIBATALKAN:'bg-secondary',DIBATALKAN_WALI:'bg-secondary',MENUNGGU:'bg-warning text-dark',PENDING:'bg-warning text-dark',DIPROSES:'bg-warning text-dark',MENUNGGU_VERIFIKASI:'bg-warning text-dark',DITOLAK:'bg-danger',GAGAL:'bg-danger',DIBATALKAN_ADMIN:'bg-danger',ALUMNI:'bg-info text-dark'};
+				const label = status ? status.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase()) : '-';
+				return '<span class="badge ' + (colors[status] || 'bg-info text-dark') + '">' + $('<div>').text(label).html() + '</span>';
+			},
+			refreshTooltips: function (container) {
+				const root = container ? document.querySelector(container) : document;
+				if (!root) return;
+				root.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
+					if (window.bootstrap && bootstrap.Tooltip) {
+						const instance = bootstrap.Tooltip.getInstance(element);
+						if (instance) instance.dispose();
+					}
+					const label = element.getAttribute('data-bs-original-title') || element.getAttribute('title') || element.getAttribute('aria-label');
+					if (label) element.setAttribute('title', label);
+					element.removeAttribute('data-bs-toggle');
+					element.removeAttribute('data-bs-original-title');
+					element.removeAttribute('aria-describedby');
+				});
+			},
+			serverPager: function (selector, meta, onChange) {
+				const $target = $(selector).empty();
+				const total = Number((meta || {}).total || 0);
+				if (total < 1) { $target.hide(); return null; }
+				$target.show();
+				let firstRender = true;
+				const pager = new Pagination(selector, {
+					itemsCount: total,
+					currentPage: Number(meta.page || 1),
+					pageSize: Number(meta.limit || 10),
+					onPageChange: function (paging) {
+						if (firstRender) { firstRender = false; return; }
+						onChange(paging);
+					}
+				});
+				$target.find('.pagination').addClass('pagination-sm pagination-boxed mb-0');
+				return pager;
+			}
+		};
+		$(document).on('input', '.rupiah-input', function () { this.value = format(this.value); });
+		$(function () { $('.rupiah-input').each(function () { this.value = format(this.value); }); });
+	})(jQuery);
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Dropify/0.2.2/js/dropify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/id.js"></script>
 <script>

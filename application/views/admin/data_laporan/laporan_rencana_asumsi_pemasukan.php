@@ -68,6 +68,12 @@
 </style>
 
 <body class="body">
+    <?php
+    $tahun_ajaran = $tahun_ajaran ?? '-';
+    $rencana_pemasukan = isset($rencana_pemasukan) && is_array($rencana_pemasukan) ? $rencana_pemasukan : [];
+    $list_bulan = isset($list_bulan) && is_array($list_bulan) ? $list_bulan : [];
+    $tahun_ajaran_tidak_ada = trim((string) $tahun_ajaran) === '' || trim((string) $tahun_ajaran) === '-';
+    ?>
 
     <div class="judul">
         <h2>LAPORAN RENCANA ASUMSI PEMASUKAN</h2>
@@ -131,6 +137,7 @@
                 $total_per_bulan[$b] = 0;
             }
             
+            if (!$tahun_ajaran_tidak_ada && !empty($rencana_pemasukan) && !empty($list_bulan)):
             foreach ($rencana_pemasukan as $r):
                 $total_asumsi_masuk = $r['total_asumsi_masuk'];
                 $asumsi_masuk = $r['asumsi_masuk'];
@@ -180,7 +187,13 @@
                     <?php endforeach; ?>
                 </tr>
             <?php endforeach; ?>
+            <?php else: ?>
+                <tr>
+                    <td colspan="<?= max(6, 6 + count($list_bulan)) ?>" style="text-align: center;">Tidak ada data</td>
+                </tr>
+            <?php endif; ?>
         </tbody>
+        <?php if (!$tahun_ajaran_tidak_ada && !empty($rencana_pemasukan) && !empty($list_bulan)): ?>
         <tfoot>
             <tr>
                 <td><b>Jumlah</b></td>
@@ -211,6 +224,7 @@
                 <?php endforeach; ?>
             </tr>
         </tfoot>
+        <?php endif; ?>
     </table>
 
     <script>

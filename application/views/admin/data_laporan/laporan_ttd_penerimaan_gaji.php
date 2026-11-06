@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Laporan Penggunaan Anggaran </title>
+    <title>Laporan Penerimaan Gaji </title>
 </head>
 <style type="text/css" media="print">
     @page {

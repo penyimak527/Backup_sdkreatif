@@ -155,10 +155,20 @@ public function print_laporan()
     $ambil = json_decode($json, true);
 
     $semester = 'Tahunan';
-    $id_tahun_ajaran = $ambil['id_periode'] ?? '';
+    $id_tahun_ajaran = $ambil['id_periode_form_semester'] ?? '';
 
     if ($id_tahun_ajaran == '') {
-        show_error('Tahun ajaran wajib dipilih.');
+        $data = [
+        'semester'      => $semester,
+        'tahun_ajaran'  => '-',
+        'status'        => 'Tahun Ajaran',
+        'data_laporan'  => [],
+        'bulan_laporan' => []
+    ];
+        $this->load->view(
+        'admin/data_laporan/laporan_perbandingan_rencana_pengeluaran',
+        $data
+    );
         return;
     }
 

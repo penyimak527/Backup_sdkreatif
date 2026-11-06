@@ -49,7 +49,8 @@
 			</div>
 			<div class="modal-body">
 				<form id="form-tambah" enctype="multipart/form-data">
-					<?php if ($level == 'Admin'): ?>
+					<?php
+ if ((is_array($this->session->userdata('admin')) && in_array('admin', array_map('strtolower', array_map('trim', (!empty($this->session->userdata('admin')['levels']) && is_array($this->session->userdata('admin')['levels']) ? $this->session->userdata('admin')['levels'] : explode(',', (string) ($this->session->userdata('admin')['level'] ?? ''))))), true))): ?>
 						<div class="mb-3">
 							<label for="id_guru" class="form-label">Nama Guru</label>
 							<select type="text" name="id_guru" class="form-control"></select>
@@ -104,7 +105,7 @@
 				<form id="form-edit" enctype="multipart/form-data">
 					<input type="hidden" name="id_rpp">
 					<input type="hidden" name="oldImage">
-					<?php if ($level == 'Admin'): ?>
+					<?php if ((is_array($this->session->userdata('admin')) && in_array('admin', array_map('strtolower', array_map('trim', (!empty($this->session->userdata('admin')['levels']) && is_array($this->session->userdata('admin')['levels']) ? $this->session->userdata('admin')['levels'] : explode(',', (string) ($this->session->userdata('admin')['level'] ?? ''))))), true))): ?>
 						<div class="mb-3">
 							<label for="id_guru" class="form-label">Nama Guru</label>
 							<select type="text" name="id_guru" class="form-control"></select>
@@ -169,6 +170,29 @@
 </div>
 
 <script>
+	function validasiFileRpp(selector) {
+		var input = $(selector)[0];
+
+		if (!input || !input.files || input.files.length === 0) {
+			return true;
+		}
+
+		for (var i = 0; i < input.files.length; i++) {
+			var fileName = input.files[i].name.toLowerCase();
+
+			if (!fileName.endsWith('.pdf')) {
+				Swal.fire({
+					icon: 'error',
+					title: 'Gagal',
+					text: 'File RPP harus berformat PDF.',
+				});
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	$(document).ready(function () {
 		rpp();
 		kelas();
@@ -176,6 +200,10 @@
 		periode();
 
 		$("#btn-simpan").click(function () {
+			if (!validasiFileRpp('#tambah input[name="file_rpp[]"]')) {
+				return false;
+			}
+
 			$('#btn-simpan').prop('disabled', true);
 			$('#btn-simpan').html('Sedang Diproses');
 			var form = $("#form-tambah")[0];
@@ -205,6 +233,10 @@
 			})
 		})
 		$("#btn-update").click(function () {
+			if (!validasiFileRpp('#edit input[name="file_rpp[]"]')) {
+				return false;
+			}
+
 			$('#btn-update').prop('disabled', true);
 			$('#btn-update').html('Sedang Diproses');
 			var form = $("#form-edit")[0];

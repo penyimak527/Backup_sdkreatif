@@ -77,6 +77,10 @@
 				<label for="no_rekening" class="form-label">No Rekening</label>
 				<input type="text" name="no_rekening" class="form-control" placeholder="No Rekening ..." />
 			</div>
+			<div class="mb-3">
+						<label for="no_urut" class="form-label">No Urut</label>
+						<input type="text" name="no_urut" class="form-control" placeholder="No Urut ..." />
+					</div>
 			<button type="button" class="btn btn-primary" id="btn-update">Simpan</button>
 		</form>
 	</div>
@@ -147,6 +151,7 @@
 				$('#form-edit input[name="tmt"]')[0]._flatpickr.setDate(data.tmt, true);
 				$('#form-edit input[name="no_tlp"]').val(data.no_tlp);
 				$('#form-edit input[name="no_rekening"]').val(data.no_rekening);
+				$('#form-edit input[name="no_urut"]').val(data.no_urut);
 			}
 		});
 	}

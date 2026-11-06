@@ -76,7 +76,10 @@
 	}
 </style>
 
+<?php
 
+$level = $this->session->userdata('admin');
+?>
 <div class="card">
 	<div class="card-header border-bottom border-dashed d-flex align-items-center justify-content-between">
 		<h4 class="header-title">Data <?= $title; ?></h4>
@@ -158,11 +161,11 @@
 									for ($c = 0; $c < $jlh_bln; $c += 1) {
 										$no++;
 										$no_pas = sprintf("%02s", $no);
-										?>
+									?>
 										<option value="<?php echo $no_pas; ?>">
 											<?php echo $bulan[$c]; ?>
 										</option>
-										<?php
+									<?php
 									}
 									?>
 								</select>
@@ -175,11 +178,11 @@
 									<?php
 									$now = date('Y');
 									for ($a = 2025; $a <= $now; $a++) {
-										?>
+									?>
 										<option value="<?php echo $a; ?>">
 											<?php echo $a; ?>
 										</option>
-										<?php
+									<?php
 									}
 									?>
 								</select>
@@ -194,11 +197,11 @@
 									<?php
 									$now = date('Y');
 									for ($a = 2025; $a <= $now; $a++) {
-										?>
+									?>
 										<option value="<?php echo $a; ?>">
 											<?php echo $a; ?>
 										</option>
-										<?php
+									<?php
 									}
 									?>
 								</select>
@@ -213,7 +216,6 @@
 									<option value="">Pilih Guru</option>
 									<?php
 									foreach ($guru as $g): ?>
-										?>
 										<option value="<?php echo $g['id']; ?>">
 											<?php echo $g['nama_guru']; ?>
 										</option>
@@ -247,21 +249,10 @@
 						</div>
 					</div>
 					<div id="form-semester-tahun-ajaran" class="row g-2" style="display: none;">
-						<!-- <div class="col-md-12">
-							<div class="form-group">
-								<label class="mb-1 mt-1">Semester</label>
-								<select name="semester" class="form-control">
-									<option value="">Pilih Semester</option>
-									<option value="Tahunan">Tahunan</option>
-									<option value="Ganjil">Ganjil</option>
-									<option value="Genap">Genap</option>
-								</select>
-							</div>
-						</div> -->
 						<div class="col-md-12">
 							<div class="form-group">
 								<label class="mb-1">Tahun Ajaran</label>
-								<select type="date" name="id_periode" class="form-control">
+								<select name="id_periode_form_semester" class="form-control">
 									<option value="">Pilih Tahun Ajaran</option>
 									<?php foreach ($periode as $pe): ?>
 										<option value="<?php echo $pe['id']; ?>">
@@ -282,7 +273,7 @@
 									foreach ($kelas as $ke): ?>
 										?>
 										<option data-kelas="<?= $ke['nama_kelas']; ?>" value="<?php echo $ke['id']; ?>">
-											<?= $ke['nama_kelas']; ?> 	<?= $ke['kode_kelas']; ?>
+											<?= $ke['nama_kelas']; ?> <?= $ke['kode_kelas']; ?>
 										</option>
 									<?php endforeach; ?>
 								</select>
@@ -337,7 +328,12 @@
 								<label class="mb-1">Pegawai</label>
 								<select type="date" name="id_pegawai_all" class="form-control"
 									onchange="data_presensi_per_pegawai()">
-									<option value="">Pilih Pegawai</option>
+									<?php
+									if ((is_array($level) && in_array('bendahara', array_map('strtolower', array_map('trim', (!empty($level['levels']) && is_array($level['levels']) ? $level['levels'] : explode(',', (string) ($level['level'] ?? ''))))), true))) { ?>
+										<option value="">Pilih Semua Pegawai</option>
+									<?php } else { ?>
+										<option value="">Pilih Pegawai</option>
+									<?php } ?>
 									<?php foreach ($pegawai_all as $ke1): ?>
 										<option data-label="<?= $ke1['nama_pegawai']; ?>" value="<?php echo $ke1['id']; ?>">
 											<?php echo $ke1['nama_pegawai']; ?>
@@ -371,6 +367,301 @@
 								</select>
 							</div>
 						</div>
+						<div class="col-md-12">
+							<div class="form-group">
+								<label class="mb-1">Tahun Ajaran</label>
+								<select type="date" name="id_periode_resume_tanggal" class="form-control">
+									<option value="">Pilih Tahun Ajaran</option>
+									<?php foreach ($periode as $pe): ?>
+										<option data-tahun="<?= $pe['periode']; ?>" value="<?php echo $pe['id']; ?>">
+											<?php echo $pe['periode']; ?>
+										</option>
+									<?php endforeach; ?>
+								</select>
+							</div>
+						</div>
+					</div>
+
+					<!-- Filter SPP dipakai bersama antar laporan. Setiap input mempunyai ID pembungkus tersendiri. -->
+					<div id="form-spp-filter-periode-pembayaran" class="row g-2" style="display:none; margin-top:10px;">
+                        <div class="col-md-12"><div class="form-group">
+                            <label class="mb-1">Tahun Ajaran</label>
+                            <select id="sppTahunAjaranPembayaran" name="spp_id_periode_pembayaran" class="form-control" disabled>
+                                <option value="">Semua Tahun Ajaran</option>
+                                <?php foreach ($periode as $pe): ?>
+                                    <option value="<?= $pe['id']; ?>"><?= $pe['periode']; ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div></div>
+                    </div>
+					<!-- Tahun Ajaran khusus Rekap Pembayaran Per Kelas. -->
+					<div id="form-spp-filter-periode-kelas" class="row g-2" style="display:none; margin-top:10px;">
+						<div class="col-md-12">
+							<div class="form-group">
+								<label class="mb-1">Tahun Ajaran</label>
+								<select name="spp_id_periode_kelas" class="form-control" disabled>
+									<option value="">Semua Tahun Ajaran</option>
+									<?php foreach ($periode as $pe): ?>
+										<option value="<?= (int) $pe['id']; ?>" <?= strtolower(trim((string) ($pe['status'] ?? ''))) === 'aktif' ? 'selected' : ''; ?>><?= html_escape($pe['periode']); ?></option>
+									<?php endforeach; ?>
+								</select>
+							</div>
+						</div>
+					</div>
+					<!-- Filter khusus Laporan Per Jenis Tagihan. -->
+					<div id="form-spp-filter-periode-jenis" class="row g-2" style="display:none; margin-top:10px;">
+						<div class="col-md-12">
+							<div class="form-group">
+								<label class="mb-1">Tahun Ajaran</label>
+								<select id="sppTahunAjaranJenis" name="spp_id_periode_jenis" class="form-control" disabled>
+									<option value="">Semua Tahun Ajaran</option>
+									<?php foreach ($periode as $pe): ?>
+										<option value="<?= (int) $pe['id']; ?>" <?= strtolower(trim((string) ($pe['status'] ?? ''))) === 'aktif' ? 'selected' : ''; ?>><?= html_escape($pe['periode']); ?></option>
+									<?php endforeach; ?>
+								</select>
+							</div>
+						</div>
+					</div>
+					<div id="form-spp-filter-kelas-jenis" class="row g-2" style="display:none; margin-top:10px;">
+						<div class="col-md-12">
+							<div class="form-group">
+								<label class="mb-1">Kelas</label>
+								<select id="sppKelasJenis" name="spp_id_kelas_jenis" class="form-control" disabled>
+									<option value="">Semua Kelas</option>
+									<?php foreach ($spp_kelas as $skl): ?>
+										<option value="<?= (int) $skl['id']; ?>" data-periode="<?= (int) $skl['id_periode']; ?>"><?= html_escape($skl['nama_kelas']); ?></option>
+									<?php endforeach; ?>
+								</select>
+							</div>
+						</div>
+					</div>
+					<div id="form-spp-filter-kelas" class="row g-2" style="display:none; margin-top:10px;">
+						<div class="col-md-12">
+							<div class="form-group">
+								<label class="mb-1">Kelas</label>
+								<select id="sppKelasPembayaran" name="spp_id_kelas_setting" class="form-control">
+									<option value="">Semua Kelas</option>
+									<?php foreach ($spp_kelas as $skl): ?>
+										<option value="<?= $skl['id']; ?>" data-periode="<?= (int) $skl['id_periode']; ?>"><?= $skl['nama_kelas']; ?><?= !empty($skl['periode']) ? ' - ' . $skl['periode'] : ''; ?></option>
+									<?php endforeach; ?>
+								</select>
+							</div>
+						</div>
+					</div>
+					<div id="form-spp-filter-jenis" class="row g-2" style="display:none; margin-top:10px;">
+						<div class="col-md-12">
+							<div class="form-group">
+								<label class="mb-1">Jenis Tagihan</label>
+								<select name="spp_id_jenis_tagihan" class="form-control">
+									<option value="">Semua Jenis Tagihan</option>
+									<?php foreach ($spp_jenis_tagihan as $sj): ?>
+										<option value="<?= $sj['id']; ?>"><?= $sj['nama_jenis']; ?></option>
+									<?php endforeach; ?>
+								</select>
+							</div>
+						</div>
+					</div>
+					<div id="form-spp-filter-metode" class="row g-2" style="display:none; margin-top:10px;">
+						<div class="col-md-12">
+							<div class="form-group">
+								<label class="mb-1">Metode Pembayaran</label>
+								<select name="spp_id_metode" class="form-control">
+									<option value="">Semua Metode</option>
+									<?php foreach ($spp_metode as $sm): ?>
+										<option value="<?= $sm['id']; ?>"><?= $sm['nama_metode']; ?></option>
+									<?php endforeach; ?>
+								</select>
+							</div>
+						</div>
+					</div>
+					<!-- <div id="form-spp-filter-kasbank" class="row g-2" style="display:none; margin-top:10px;">
+						<div class="col-md-12">
+							<div class="form-group">
+								<label class="mb-1">Kas / Rekening</label>
+								<select name="spp_id_kasbank" class="form-control">
+									<option value="">Semua Kas / Rekening</option>
+									<?php foreach ($spp_kasbank as $sk): ?>
+										<option value="<?= $sk['id']; ?>"><?= $sk['keterangan']; ?></option>
+									<?php endforeach; ?>
+								</select>
+							</div>
+						</div>
+					</div> -->
+					<!-- <div id="form-spp-filter-status-pembayaran" class="row g-2" style="display:none; margin-top:10px;">
+                        <div class="col-md-12"><div class="form-group">
+                            <label class="mb-1">Status Transaksi</label>
+                            <select name="spp_status_pembayaran" class="form-control" disabled>
+                                <option value="Aktif" selected>Aktif</option>
+                                <option value="Dibatalkan">Dibatalkan</option>
+                                <option value="Semua">Semua Status</option>
+                            </select>
+                        </div></div>
+                    </div> -->
+					<!-- Tahun Ajaran khusus Laporan Tagihan Per Siswa. -->
+					<div id="form-spp-filter-periode-siswa" class="row g-2" style="display:none; margin-top:10px;">
+						<div class="col-md-12"><div class="form-group">
+							<label class="mb-1">Tahun Ajaran</label>
+							<select id="sppTahunAjaranSiswa" name="spp_id_periode_siswa" class="form-control" disabled>
+								<option value="">Pilih Tahun Ajaran</option>
+								<?php foreach ($periode as $pe): ?>
+									<option value="<?= (int) $pe['id']; ?>" <?= strtolower(trim((string) ($pe['status'] ?? ''))) === 'aktif' ? 'selected' : ''; ?>><?= html_escape($pe['periode']); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</div></div>
+					</div>
+					<div id="form-spp-filter-siswa" class="row g-2" style="display:none; margin-top:10px;">
+						<div class="col-md-12">
+							<div class="form-group">
+								<label class="mb-1">Siswa</label>
+								<select id="sppLaporanSiswa" name="spp_id_siswa" class="form-control">
+									<option value="">Pilih Siswa</option>
+									<?php foreach ($spp_siswa as $ss): ?>
+										<?php
+											$namaSiswa = trim((string) $ss['nama_lengkap']);
+											$nisSiswa = trim((string) $ss['nis']);
+											$namaKelas = trim((string) ($ss['nama_kelas'] ?? ''));
+											$labelSiswa = $namaSiswa . ($nisSiswa !== '' ? ' - ' . $nisSiswa : '');
+											$labelSiswa .= ' - ' . ($namaKelas !== '' ? 'Kelas ' . $namaKelas : 'Belum ada kelas');
+										?>
+										<option value="<?= (int) $ss['id']; ?>"><?= html_escape($labelSiswa); ?></option>
+									<?php endforeach; ?>
+								</select>
+							</div>
+						</div>
+					</div>
+					<div id="form-spp-filter-periode" class="row g-2" style="display:none; margin-top:10px;">
+						<div class="col-md-12">
+							<div class="form-group">
+								<label class="mb-1">Tahun Pelajaran</label>
+								<select name="spp_id_periode_tunggakan" class="form-control">
+									<option value="">Semua Tahun Pelajaran</option>
+									<?php foreach ($periode as $pe): ?>
+										<option value="<?= $pe['id']; ?>"><?= $pe['periode']; ?></option>
+									<?php endforeach; ?>
+								</select>
+							</div>
+						</div>
+					</div>
+					<!-- Filter khusus Laporan Tunggakan; tidak memengaruhi laporan lainnya. -->
+					<div id="form-spp-filter-periode-tunggakan" class="row g-2" style="display:none; margin-top:10px;">
+						<div class="col-md-12"><div class="form-group">
+							<label class="mb-1">Tahun Ajaran</label>
+							<select id="sppTahunAjaranTunggakan" name="spp_id_periode_tunggakan" class="form-control" disabled>
+								<option value="">Semua Tahun Ajaran</option>
+								<?php foreach ($periode as $pe): ?>
+									<option value="<?= (int) $pe['id']; ?>" <?= strtolower(trim((string) ($pe['status'] ?? ''))) === 'aktif' ? 'selected' : ''; ?>><?= html_escape($pe['periode']); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</div></div>
+					</div>
+					<div id="form-spp-filter-kelas-tunggakan" class="row g-2" style="display:none; margin-top:10px;">
+						<div class="col-md-12"><div class="form-group">
+							<label class="mb-1">Kelas</label>
+							<select id="sppKelasTunggakan" name="spp_id_kelas_tunggakan" class="form-control" disabled>
+								<option value="">Semua Kelas</option>
+								<?php foreach ($spp_kelas as $skl): ?>
+									<option value="<?= (int) $skl['id']; ?>" data-periode="<?= (int) $skl['id_periode']; ?>"><?= html_escape($skl['nama_kelas']); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</div></div>
+					</div>
+					<div id="form-spp-filter-jenis-tunggakan" class="row g-2" style="display:none; margin-top:10px;">
+						<div class="col-md-12"><div class="form-group">
+							<label class="mb-1">Jenis Tagihan</label>
+							<select name="spp_id_jenis_tunggakan" class="form-control" disabled>
+								<option value="">Semua Jenis</option>
+								<?php foreach ($spp_jenis_tagihan as $sj): ?>
+									<option value="<?= (int) $sj['id']; ?>"><?= html_escape($sj['nama_jenis']); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</div></div>
+					</div>
+					<div id="form-spp-filter-status-siswa-tunggakan" class="row g-2" style="display:none; margin-top:10px;">
+						<div class="col-md-12"><div class="form-group">
+							<label class="mb-1">Status Siswa</label>
+							<select name="spp_status_siswa_tunggakan" class="form-control" disabled>
+								<option value="Aktif" selected>Aktif</option>
+								<option value="Tidak Aktif">Tidak Aktif</option>
+								<option value="Semua">Semua Status</option>
+							</select>
+						</div></div>
+					</div>
+					<!-- Filter khusus Laporan Tabungan. Kelas mengikuti Tahun Ajaran yang dipilih. -->
+					<div id="form-spp-filter-periode-tabungan" class="row g-2" style="display:none; margin-top:10px;">
+						<div class="col-md-12"><div class="form-group">
+							<label class="mb-1">Tahun Ajaran</label>
+							<select id="sppTahunAjaranTabungan" name="spp_id_periode_tabungan" class="form-control" disabled>
+								<option value="">Semua Tahun Ajaran</option>
+								<?php foreach ($periode as $pe): ?>
+									<option value="<?= (int) $pe['id']; ?>" <?= strtolower(trim((string) ($pe['status'] ?? ''))) === 'aktif' ? 'selected' : ''; ?>><?= html_escape($pe['periode']); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</div></div>
+					</div>
+					<div id="form-spp-filter-kelas-tabungan" class="row g-2" style="display:none; margin-top:10px;">
+						<div class="col-md-12"><div class="form-group">
+							<label class="mb-1">Kelas</label>
+							<select id="sppKelasTabungan" name="spp_id_kelas_tabungan" class="form-control" disabled>
+								<option value="">Semua Kelas</option>
+								<?php foreach ($spp_kelas as $skl): ?>
+									<option value="<?= (int) $skl['id']; ?>" data-periode="<?= (int) $skl['id_periode']; ?>"><?= html_escape($skl['nama_kelas']); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</div></div>
+					</div>
+					<div id="form-spp-filter-jenis-tabungan" class="row g-2" style="display:none; margin-top:10px;">
+						<div class="col-md-12">
+							<div class="form-group">
+								<label class="mb-1">Jenis Transaksi</label>
+								<select name="spp_jenis_tabungan" class="form-control">
+									<option value="">Semua</option>
+									<option value="Setoran">Setoran</option>
+									<option value="Penarikan">Penarikan</option>
+								</select>
+							</div>
+						</div>
+					</div>
+					<div id="form-spp-filter-status-tabungan" class="row g-2" style="display:none; margin-top:10px;">
+						<div class="col-md-12">
+							<div class="form-group">
+								<label class="mb-1">Status</label>
+								<select name="spp_status_tabungan" class="form-control">
+									<option value="">Semua</option>
+									<option value="Aktif">Aktif</option>
+									<option value="Dibatalkan">Dibatalkan</option>
+								</select>
+							</div>
+						</div>
+					</div>
+					<!-- Filter khusus Laporan Pembatalan: Tahun Ajaran dan Siswa. -->
+					<div id="form-spp-filter-periode-pembatalan" class="row g-2" style="display:none; margin-top:10px;">
+						<div class="col-md-12"><div class="form-group">
+							<label class="mb-1">Tahun Ajaran</label>
+							<select id="sppTahunAjaranPembatalan" name="spp_id_periode_pembatalan" class="form-control" disabled>
+								<option value="">Pilih Tahun Ajaran</option>
+								<?php foreach ($periode as $pe): ?>
+									<option value="<?= (int) $pe['id']; ?>" <?= strtolower(trim((string) ($pe['status'] ?? ''))) === 'aktif' ? 'selected' : ''; ?>><?= html_escape($pe['periode']); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</div></div>
+					</div>
+					<div id="form-spp-filter-siswa-pembatalan" class="row g-2" style="display:none; margin-top:10px;">
+						<div class="col-md-12"><div class="form-group">
+							<label class="mb-1">Siswa</label>
+							<select id="sppSiswaPembatalan" name="spp_id_siswa_pembatalan" class="form-control" disabled>
+								<option value="">Semua Siswa</option>
+								<?php foreach ($spp_siswa_pembatalan as $ss): ?>
+									<?php
+										$labelSiswa = trim((string) $ss['nama_siswa']);
+										$nisSiswa = trim((string) $ss['nis']);
+										$namaKelas = trim((string) ($ss['nama_kelas'] ?? ''));
+										$labelSiswa .= $nisSiswa !== '' ? ' - ' . $nisSiswa : '';
+										$labelSiswa .= ' - ' . ($namaKelas !== '' ? 'Kelas ' . $namaKelas : 'Belum ada kelas');
+									?>
+									<option value="<?= (int) $ss['id_siswa']; ?>" data-periode="<?= (int) $ss['id_periode']; ?>"><?= html_escape($labelSiswa); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</div></div>
 					</div>
 				</form>
 				<div class="modal-footer" style="margin-right:-22px;">
@@ -1079,10 +1370,172 @@
 		</div>
 	</div>
 </div>
+
+<div class="modal fade" id="cek_excel_laporan_payroll" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel"
+	aria-hidden="true">
+	<div class="modal-dialog modal-lg">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h4 class="modal-title" id="myLargeModalLabel"></h4>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<table id="data_laporan_payroll_gaji_guru_karyawan" class="grid">
+					<thead>
+						<tr>
+							<td widtd="5%">No.</td>
+							<td>Nama</td>
+							<td>No Rekening</td>
+							<td>Nominal</td>
+						</tr>
+					</thead>
+					<tbody>
+
+					</tbody>
+					<tfoot>
+						<tr>
+							<td colspan="3" style="text-align:center;"><b>JUMLAH</b></td>
+							<td style="text-align:right;">
+								<b id="total_gaji_bersih_payroll">0</b>
+							</td>
+						</tr>
+					</tfoot>
+				</table>
+			</div>
+		</div>
+	</div>
+</div>
+<!-- Tabel perantara ekspor Excel SPP, mengikuti cara laporan existing membaca baris HTML. -->
+<div id="spp-tabel-excel" style="display:none" aria-hidden="true">
+	<table id="data_spp_pembayaran" class="grid">
+		<thead>
+			<tr>
+				<td>No</td>
+				<td>Tanggal</td>
+				<td>Waktu</td>
+				<td>No Transaksi</td>
+				<td>Siswa</td>
+				<td>Kelas</td>
+				<td>Jenis Tagihan</td>
+				<td>Metode</td>
+				<td>Petugas</td>
+				<td>Total Pembayaran</td>
+			</tr>
+		</thead>
+		<tbody></tbody>
+	</table>
+	<table id="data_spp_per_siswa" class="grid">
+		<thead><tr>
+			<td>No</td><td>Siswa</td><td>NIS</td><td>Kelas</td><td>Nama Tagihan</td>
+			<td>Jenis Tagihan</td><td>Bulan</td><td>Status</td>
+			<td>Total Tagihan</td><td>Total Pembayaran</td><td>Total Sisa</td>
+		</tr></thead><tbody></tbody>
+	</table>
+	<table id="data_spp_pembayaran_siswa" class="grid">
+		<thead><tr>
+			<td>No</td><td>Siswa</td><td>NIS</td><td>Tanggal</td><td>No Transaksi</td>
+			<td>Nama Tagihan</td><td>Bulan</td><td>Metode</td><td>Nominal Pembayaran</td>
+		</tr></thead><tbody></tbody>
+	</table>
+	<table id="data_spp_cicilan_siswa" class="grid">
+		<thead><tr>
+			<td>No</td><td>Siswa</td><td>NIS</td><td>Tanggal</td><td>No Transaksi</td>
+			<td>Nama Tagihan</td><td>Bulan</td><td>Cicilan Ke</td><td>Metode</td>
+			<td>Nominal Cicilan</td><td>Sisa Setelah Bayar</td>
+		</tr></thead><tbody></tbody>
+	</table>
+	<table id="data_spp_tunggakan_siswa" class="grid">
+		<thead><tr>
+			<td>No</td><td>Siswa</td><td>NIS</td><td>Tahun Asal</td><td>Kelas Asal</td>
+			<td>Nama Tagihan</td><td>Jatuh Tempo</td><td>Total Tunggakan</td>
+		</tr></thead><tbody></tbody>
+	</table>
+	<table id="data_spp_per_kelas" class="grid">
+		<thead>
+			<tr>
+				<td>No</td>
+				<td>Kelas</td>
+				<td>Jumlah Siswa</td>
+				<td>Target</td>
+				<td>Pembayaran</td>
+				<td>Tunggakan</td>
+				<td>Realisasi (%)</td>
+			</tr>
+		</thead>
+		<tbody></tbody>
+	</table>
+	<table id="data_spp_per_jenis" class="grid">
+		<thead>
+			<tr>
+				<td>No</td>
+				<td>Jenis Tagihan</td>
+				<td>Nama Tagihan</td>
+				<td>Jumlah Siswa</td>
+				<td>Total Target Tagihan</td>
+				<td>Total Pembayaran</td>
+				<td>Total Sisa</td>
+				<td>Realisasi (%)</td>
+			</tr>
+		</thead>
+		<tbody></tbody>
+	</table>
+	<table id="data_spp_tunggakan" class="grid">
+		<thead>
+			<tr>
+				<td>No</td>
+				<td>Siswa</td>
+				<td>NIS</td>
+				<td>Kelas</td>
+				<td>Tahun Asal</td>
+				<td>Jumlah Tagihan</td>
+				<td>Total Tunggakan</td>
+			</tr>
+		</thead>
+		<tbody></tbody>
+	</table>
+	<table id="data_spp_tabungan" class="grid">
+		<thead>
+			<tr>
+				<td>No</td>
+				<td>Tanggal</td>
+				<td>No Transaksi</td>
+				<td>Jenis Transaksi</td>
+				<td>Siswa</td>
+				<!-- <td>NIS</td> -->
+				<td>Kelas</td>
+				<td>Metode Pembayaran</td>
+				<td>Status</td>
+				<td>Petugas</td>
+				<td>Nominal</td>
+			</tr>
+		</thead>
+		<tbody></tbody>
+	</table>
+	<table id="data_spp_pembatalan" class="grid">
+		<thead>
+			<tr>
+				<td>No</td>
+				<td>No Transaksi</td>
+				<td>Siswa</td>
+				<td>NIS</td>
+				<td>Nominal</td>
+				<td>Petugas Transaksi</td>
+				<td>Petugas Pembatalan</td>
+				<td>Tanggal Pembatalan</td>
+				<td>Alasan</td>
+			</tr>
+		</thead>
+		<tbody></tbody>
+	</table>
+</div>
+
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
 <script>
-	$(document).ready(function () {
+	let prosesExportResumeTanggal = false;
+	let resumeTanggalDataSiap = false;
+
+	$(document).ready(function() {
 		let today = new Date();
 
 		// Format YYYY-MM-DD
@@ -1105,37 +1558,193 @@
 
 		$('select[name="single_filter_tahun"]').val(tahunSekarang);
 
+		// Select2 mengikuti komponen siswa existing tanpa mengubah nilai filter POST.
+		$('#sppLaporanSiswa').select2({
+			width: '100%',
+			dropdownParent: $('#printLaporan'),
+			placeholder: 'Pilih Siswa',
+			allowClear: true,
+			minimumResultsForSearch: 0
+		});
+
+		// Kelas Laporan Pembayaran hanya menampilkan kelas sesuai Tahun Ajaran.
+		var pilihanKelasPembayaran = $('#sppKelasPembayaran option').clone();
+		function sesuaikan_kelas_pembayaran() {
+			var idPeriode = $('#sppTahunAjaranPembayaran').val();
+			var idKelas = $('#sppKelasPembayaran').val();
+			var selectKelas = $('#sppKelasPembayaran').empty();
+			pilihanKelasPembayaran.each(function() {
+				var option = $(this);
+				if (!option.val() || !idPeriode || option.attr('data-periode') === idPeriode) {
+					selectKelas.append(option.clone());
+				}
+			});
+			selectKelas.val(idKelas);
+			if (selectKelas.val() === null) selectKelas.val('');
+		}
+		$('#sppTahunAjaranPembayaran').on('change', sesuaikan_kelas_pembayaran);
+		sesuaikan_kelas_pembayaran();
+
+		// Pilihan kelas hanya untuk tahun ajaran Laporan Per Jenis Tagihan.
+		var sppPilihanKelasJenis = $('#sppKelasJenis option').clone();
+		function sesuaikan_kelas_jenis() {
+			var idPeriode = $('#sppTahunAjaranJenis').val();
+			var idKelas = $('#sppKelasJenis').val();
+			var selectKelas = $('#sppKelasJenis').empty();
+			sppPilihanKelasJenis.each(function() {
+				var option = $(this);
+				if (!option.val() || !idPeriode || option.attr('data-periode') === idPeriode) {
+					selectKelas.append(option.clone());
+				}
+			});
+			selectKelas.val(idKelas);
+			if (selectKelas.val() === null) selectKelas.val('');
+		}
+		$('#sppTahunAjaranJenis').on('change', sesuaikan_kelas_jenis);
+		sesuaikan_kelas_jenis();
+
+		// Kelas Laporan Tunggakan mengikuti Tahun Ajaran, tanpa mengubah pilihan laporan lain.
+		var pilihanKelasTunggakan = $('#sppKelasTunggakan option').clone();
+		function sesuaikan_kelas_tunggakan() {
+			var idPeriode = $('#sppTahunAjaranTunggakan').val();
+			var idKelas = $('#sppKelasTunggakan').val();
+			var selectKelas = $('#sppKelasTunggakan').empty();
+			pilihanKelasTunggakan.each(function() {
+				var option = $(this);
+				if (!option.val() || !idPeriode || option.attr('data-periode') === idPeriode) {
+					selectKelas.append(option.clone());
+				}
+			});
+			selectKelas.val(idKelas);
+			if (selectKelas.val() === null) selectKelas.val('');
+		}
+		$('#sppTahunAjaranTunggakan').on('change', sesuaikan_kelas_tunggakan);
+		sesuaikan_kelas_tunggakan();
+
+		// Kelas Tabungan hanya menampilkan kelas pada Tahun Ajaran yang dipilih.
+		var pilihanKelasTabungan = $('#sppKelasTabungan option').clone();
+		function sesuaikan_kelas_tabungan() {
+			var idPeriode = $('#sppTahunAjaranTabungan').val();
+			var idKelas = $('#sppKelasTabungan').val();
+			var selectKelas = $('#sppKelasTabungan').empty();
+			pilihanKelasTabungan.each(function() {
+				var option = $(this);
+				if (!option.val() || !idPeriode || option.attr('data-periode') === idPeriode) {
+					selectKelas.append(option.clone());
+				}
+			});
+			selectKelas.val(idKelas);
+			if (selectKelas.val() === null) selectKelas.val('');
+		}
+		$('#sppTahunAjaranTabungan').on('change', sesuaikan_kelas_tabungan);
+		sesuaikan_kelas_tabungan();
+
+		// Siswa Pembatalan mengikuti Tahun Ajaran, termasuk siswa tidak aktif yang mempunyai histori.
+		var pilihanSiswaPembatalan = $('#sppSiswaPembatalan option').clone();
+		function sesuaikan_siswa_pembatalan() {
+			var idPeriode = $('#sppTahunAjaranPembatalan').val();
+			var idSiswa = $('#sppSiswaPembatalan').val();
+			var selectSiswa = $('#sppSiswaPembatalan').empty();
+			pilihanSiswaPembatalan.each(function() {
+				var option = $(this);
+				if (!option.val() || (idPeriode && option.attr('data-periode') === idPeriode)) {
+					selectSiswa.append(option.clone());
+				}
+			});
+			selectSiswa.val(idSiswa);
+			if (selectSiswa.val() === null) selectSiswa.val('');
+			// Perbarui pilihan terlihat jika Select2 sudah terpasang.
+			if (selectSiswa.data('select2')) selectSiswa.trigger('change.select2');
+		}
+		$('#sppTahunAjaranPembatalan').on('change', sesuaikan_siswa_pembatalan);
+		sesuaikan_siswa_pembatalan();
+		$('#sppSiswaPembatalan').select2({
+			width: '100%',
+			dropdownParent: $('#printLaporan'),
+			placeholder: 'Semua Siswa',
+			allowClear: true,
+			minimumResultsForSearch: 0
+		});
+
 		// Tampilkan form hari sebagai default
 		$('#form-hari').show();
 		$('#form-bulan').hide();
 		$('#form-tahun').hide();
 		data_laporan();
-		$('#filter_hari').click(function () {
+		$('#filter_hari').click(function() {
 			$('#form-hari').show();
 			$('#form-bulan').hide();
 			$('#form-tahun').hide();
+			atur_filter_pembayaran_spp();
 		});
 
-		$('#filter_bulan').click(function () {
+		$('#filter_bulan').click(function() {
 			$('#form-hari').hide();
 			$('#form-bulan').show();
 			$('#form-tahun').hide();
+			atur_filter_pembayaran_spp();
 		});
 
-		$('#filter_tahun').click(function () {
+		$('#filter_tahun').click(function() {
 			$('#form-hari').hide();
 			$('#form-bulan').hide();
 			$('#form-tahun').show();
+			atur_filter_pembayaran_spp();
 		});
 
-		$('#btn_print_laporan').click(function () {
+		$('#btn_print_laporan').click(function() {
 			var unindexed_array = $('#form_laporan').serializeArray();
 			var indexed_array = {};
 
-			$.map(unindexed_array, function (n, i) {
+			$.map(unindexed_array, function(n, i) {
 				indexed_array[n['name']] = n['value'];
 			});
 			indexed_array['print'] = 'pdf';
+			if ($('#path').val() === 'admin/data_laporan/laporan_per_siswa') {
+				if (!$('#sppTahunAjaranSiswa').val()) {
+					alert('Silakan pilih Tahun Ajaran.');
+					return;
+				}
+				if (!$('#sppLaporanSiswa').val()) {
+					alert('Silakan pilih salah satu Siswa.');
+					return;
+				}
+				indexed_array = {
+					spp_id_periode_siswa: $('#sppTahunAjaranSiswa').val(),
+					spp_id_siswa: $('#sppLaporanSiswa').val(),
+					print: 'pdf'
+				};
+			}
+			if ($('#path').val() === 'admin/data_laporan/laporan_per_jenis_tagihan') {
+				if (!$('#sppTahunAjaranJenis').val()) {
+					alert('Silakan pilih Tahun Ajaran.');
+					return;
+				}
+				indexed_array = {
+					spp_id_periode_jenis: $('#sppTahunAjaranJenis').val(),
+					spp_id_kelas_jenis: $('#sppKelasJenis').val() || '',
+					print: 'pdf'
+				};
+			}
+			if ($('#path').val() === 'admin/data_laporan/laporan_tunggakan') {
+				indexed_array = {
+					spp_id_periode_tunggakan: $('#sppTahunAjaranTunggakan').val() || '',
+					spp_id_kelas_tunggakan: $('#sppKelasTunggakan').val() || '',
+					spp_id_jenis_tunggakan: $('#form-spp-filter-jenis-tunggakan select').val() || '',
+					print: 'pdf'
+				};
+			}
+			if ($('#path').val() === 'admin/data_laporan/laporan_pembatalan') {
+				if (!$('#sppTahunAjaranPembatalan').val()) {
+					alert('Silakan pilih Tahun Ajaran.');
+					return;
+				}
+				indexed_array = {
+					spp_id_periode_pembatalan: $('#sppTahunAjaranPembatalan').val(),
+					spp_id_siswa_pembatalan: $('#sppSiswaPembatalan').val() || '',
+					print: 'pdf'
+				};
+			}
 			let path = $('#path').val();
 
 			$.ajax({
@@ -1147,7 +1756,7 @@
 				beforeSend: () => {
 					$('#popup_load').show();
 				},
-				success: function (result) {
+				success: function(result) {
 
 					let myWindow = window.open('', '_blank');
 					myWindow.document.write(result);
@@ -1158,11 +1767,46 @@
 			});
 		});
 
-		$('#btn_print_laporan_excel').click(function () {
+		$('#btn_print_laporan_excel').click(function(event) {
 			const cek_btn = $(this).val();
-			if (cek_btn == 'Guru') {
-				data_resume_tanggal_jurnal();
-			} else if (cek_btn == 'laporan_rencana_pemasukan') {
+
+			// Cabang Excel laporan SPP dijalankan pada handler ekspor di bawah,
+			// tepat sebelum cek_btn == 'Guru'; jangan hentikan event berikutnya.
+			if (cek_btn.indexOf('spp_') === 0) return;
+
+			if ((cek_btn === 'Guru' || cek_btn === 'Karyawan') && !prosesExportResumeTanggal) {
+				event.stopImmediatePropagation();
+				resumeTanggalDataSiap = false;
+
+				$('#btn_print_laporan_excel')
+					.attr('disabled', true)
+					.html('<i class="fa fa-spinner fa-spin me-1"></i> Loading...');
+
+				const lanjutExport = function() {
+					prosesExportResumeTanggal = true;
+					resumeTanggalDataSiap = true;
+					$('#btn_print_laporan_excel')
+						.prop('disabled', false);
+					document.getElementById('btn_print_laporan_excel').dispatchEvent(new Event('click'));
+					$('#btn_print_laporan_excel')
+						.prop('disabled', true);
+				};
+
+				if (cek_btn === 'Guru') {
+					data_resume_tanggal_jurnal(lanjutExport);
+				} else {
+					data_resume_tanggal_kegiatan(lanjutExport);
+				}
+
+				return;
+			}
+
+			if (prosesExportResumeTanggal) {
+				prosesExportResumeTanggal = false;
+				return;
+			}
+
+			if (cek_btn == 'laporan_rencana_pemasukan') {
 				data_laporan_rencana_pemasukan();
 			} else if (cek_btn == 'laporan_rencana_asumsi_pemasukan') {
 				data_laporan_rencana_asumsi_pemasukan();
@@ -1192,10 +1836,11 @@
 				data_laporan_perbandingan_rencana_pengeluaran();
 			} else if (cek_btn == 'rekap_presensi_keterlambatan_pegawai') {
 				data_presensi_keterlambatan_pegawai();
+			} else if (cek_btn == 'laporan_payroll_gaji_guru_dan_karyawan') {
+				data_laporan_payroll_gaji_guru_dan_karyawan();
 			}
 			data_jurnal_pegawai();
 			data_jurnal_guru_kelas();
-			data_resume_tanggal_kegiatan();
 			data_izin_pegawai();
 			data_presensi_pegawai();
 			data_presensi_per_pegawai();
@@ -1219,7 +1864,7 @@
 				search
 			},
 			dataType: 'JSON',
-			success: function (data) {
+			success: function(data) {
 				var table = '';
 				if (data.length == 0) {
 					table += `
@@ -1228,7 +1873,7 @@
 					</tr>
 				`;
 				} else {
-					data.forEach(function (item) {
+					data.forEach(function(item) {
 						if (item.name == "Laporan") {
 							return;
 						}
@@ -1251,7 +1896,949 @@
 		});
 	}
 
+	// Filter yang sama dipakai beberapa laporan SPP; dinonaktifkan ketika tidak digunakan.
+	function reset_form_laporan_spp() {
+		$('#form_laporan [id^="form-spp-filter-"]').hide().find('select').prop('disabled', true);
+
+	}
+
+    // Filter Laporan Pembayaran dipakai sama pada Hari, Bulan, Tahun.
+    // Perubahan radio periode hanya mengganti input waktu, tidak menonaktifkan filter lain.
+    function atur_filter_pembayaran_spp() {
+        var aktif = $('#myLargeModalLabel').text().trim() === 'Laporan Pembayaran';
+        if (!aktif) return;
+        var mode = $('input[name="filter"]:checked').val();
+        $('#form-hari').toggle(mode === 'tanggal');
+        $('#form-bulan').toggle(mode === 'bulan');
+        $('#form-tahun').toggle(mode === 'tahun');
+        [
+            'periode-pembayaran', 'kelas', 'jenis', 'metode', 'kasbank',
+            'status-pembayaran'
+        ].forEach(function(nama) {
+            $('#form-spp-filter-' + nama).show().find('select').prop('disabled', false);
+        });
+        $('#form-spp-filter-kelas select').attr('name','spp_id_kelas_setting');
+        $('#form-spp-filter-jenis select').attr('name','spp_id_jenis_tagihan');
+    }
+
+	// Laporan SPP: data AJAX dimasukkan ke tabel HTML terlebih dahulu,
+	// kemudian tabel dibaca kembali oleh SheetJS, seperti laporan SD Kreatif existing.
+	function spp_filter_excel() {
+		var fields = $('#form_laporan').serializeArray();
+		var dataPost = {};
+		$.each(fields, function(i, field) {
+			dataPost[field.name] = field.value;
+		});
+		dataPost.bulan = dataPost.filter_bulan || '';
+		dataPost.tahun = dataPost.filter_tahun || '';
+		return dataPost;
+	}
+
+	function spp_validasi_excel(filter) {
+		if (filter.filter == 'tanggal' && (!filter.dari_tanggal || !filter.sampai_tanggal)) {
+			alert('Pastikan tanggal sudah dipilih.');
+			return false;
+		}
+		return true;
+	}
+
+	function spp_loading_excel(loading) {
+		$('#btn_print_laporan_excel').prop('disabled', loading).html(loading ?
+			'<i class="fa fa-spinner fa-spin me-1"></i> Loading...' :
+			'<i class="fa fa-file-excel me-1"></i> Excel');
+	}
+
+	// Tiap baris HTML menandai sel nominal agar Excel menerimanya sebagai angka,
+	// bukan teks. Nama siswa/NIS/nomor transaksi tetap teks apa adanya.
+	function spp_tulis_baris($parent, values, numericColumns) {
+		var $row = $('<tr>');
+		values.forEach(function(value, index) {
+			var $cell = $('<td>');
+			if (numericColumns.indexOf(index) !== -1) {
+				var nominal = Number(value || 0);
+				$cell.attr('data-excel-number', nominal).text(nominal);
+			} else {
+				$cell.text(value == null ? '' : String(value));
+			}
+			$row.append($cell);
+		});
+		$parent.append($row);
+	}
+
+	function spp_isi_tabel_excel(selector, rows, numericColumns, footerRows) {
+		var $body = $(selector).find('tbody').empty();
+		rows.forEach(function(cells) {
+			spp_tulis_baris($body, cells, numericColumns);
+		});
+		$body.append($('<tr>').attr('data-excel-empty', '1'));
+		footerRows.forEach(function(item) {
+			spp_tulis_baris($body, item.cells, item.numericColumns);
+		});
+	}
+
+	function spp_kosongkan_tabel_excel(selector) {
+		$(selector).find('tbody').empty();
+	}
+
+	// Baca dari tabel HTML, tidak mengambil ulang atau mengolah ulang data controller.
+	function spp_baca_tabel_excel(selector) {
+		var hasil = [];
+		$(selector).find('thead tr, tbody tr').each(function() {
+			if (this.getAttribute('data-excel-empty') === '1') {
+				hasil.push([]);
+				return;
+			}
+			var baris = [];
+			$(this).children('th, td').each(function() {
+				var angka = this.getAttribute('data-excel-number');
+				baris.push(angka !== null ? Number(angka) : $(this).text().trim());
+			});
+			hasil.push(baris);
+		});
+		return hasil;
+	}
+
+	// Khusus tujuh laporan SPP: perapian Excel tanpa mengubah AJAX, query, atau Print.
+	// formatTanggal() existing dibiarkan untuk laporan SDKreatif yang lain.
+	function spp_tanggal_file_excel(nilai) {
+		var teks = String(nilai || '').trim();
+		var cocok = teks.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:\s.*)?$/);
+		if (cocok) {
+			return cocok[3].padStart(2, '0') + '-' + cocok[2].padStart(2, '0') + '-' + cocok[1];
+		}
+		cocok = teks.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+		if (cocok) {
+			return cocok[1].padStart(2, '0') + '-' + cocok[2].padStart(2, '0') + '-' + cocok[3];
+		}
+		cocok = teks.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+		if (cocok) {
+			// Format masukan browser yang memakai slash: mm/dd/yyyy.
+			return cocok[2].padStart(2, '0') + '-' + cocok[1].padStart(2, '0') + '-' + cocok[3];
+		}
+		return teks.replace(/[^\da-zA-Z-]/g, '_') || 'tanggal';
+	}
+
+
+	// Format Tahun Ajaran untuk nama berkas saja, misalnya 2026/2027 -> 2026_2027.
+	function spp_nama_tahun_ajaran_file(label) {
+		return String(label || '').trim()
+			.replace(/\s*\/\s*/g, '_')
+			.replace(/[^A-Za-z0-9_-]+/g, '_')
+			.replace(/_+/g, '_')
+			.replace(/^[_-]+|[_-]+$/g, '') || 'semua';
+	}
+
+	function spp_suffix_file_excel(filter) {
+		if (filter.filter === 'tanggal') {
+			return spp_tanggal_file_excel(filter.dari_tanggal) + '_sd_' +
+				spp_tanggal_file_excel(filter.sampai_tanggal);
+		}
+		if (filter.filter === 'bulan') {
+			return 'bulan_' + String(filter.bulan || '').padStart(2, '0') + '_' + String(filter.tahun || '');
+		}
+		return 'tahun_' + String(filter.single_filter_tahun || '');
+	}
+
+	function spp_periode_excel(filter) {
+		if (filter.filter === 'tanggal') {
+			return spp_tanggal_file_excel(filter.dari_tanggal) + ' s/d ' +
+				spp_tanggal_file_excel(filter.sampai_tanggal);
+		}
+		if (filter.filter === 'bulan') {
+			return getNamaBulan(filter.bulan) + ' ' + (filter.tahun || '');
+		}
+		return 'Tahun ' + (filter.single_filter_tahun || '');
+	}
+
+	// Hanya untuk tujuh laporan SPP: gunakan SheetJS yang sudah tersedia di
+	// template. Tidak memuat script/CDN baru dan tidak mengubah engine laporan lain.
+	function spp_engine_excel_spp(selesai) {
+		selesai(window.XLSX);
+	}
+
+	// Kolom disesuaikan dengan kontennya, tetapi tidak membuat workbook terlalu lebar.
+	function spp_lebar_kolom_excel(judulKolom) {
+		var label = String(judulKolom || '').toLowerCase();
+		if (label === 'no') return 7;
+		if (/riwayat cicilan/.test(label)) return 42;
+		if (/alasan|keterangan/.test(label)) return 40;
+		if (/siswa|nama siswa/.test(label)) return 33;
+		if (/petugas|pembuat|pembatal/.test(label)) return 26;
+		if (/no transaksi|no tagihan/.test(label)) return 26;
+		if (/tanggal pembatalan/.test(label)) return 25;
+		if (/tanggal/.test(label)) return 17;
+		if (/nama tagihan/.test(label)) return 36;
+		if (/metode|jenis tagihan/.test(label)) return 24;
+		if (/dihitung tunggakan/.test(label)) return 22;
+		if (/tahun pelajaran|tahun ajaran|tahun asal/.test(label)) return 20;
+		if (/nis/.test(label)) return 14;
+		if (/kelas/.test(label)) return 15;
+		if (/status/.test(label)) return 19;
+		if (/realisasi/.test(label)) return 17;
+		if (/nominal|target|dibayar|pembayaran|tunggakan|sisa|total/.test(label)) return 20;
+		if (/jumlah/.test(label)) return 17;
+		return Math.max(14, Math.min(27, label.length + 3));
+	}
+
+	function spp_jenis_angka_excel(judul) {
+		var label = String(judul || '').toLowerCase();
+		if (/realisasi/.test(label)) return 'persen';
+		if (/jumlah (siswa|transaksi|tagihan|cicilan|pembatalan)/.test(label) || label === 'no') return 'jumlah';
+		if (/nominal|target|dibayar|pembayaran|tunggakan|sisa|setoran|penarikan|saldo|total tagihan|total dibatalkan|^total$/.test(label)) return 'rupiah';
+		return 'angka';
+	}
+
+	// Semua label ringkasan dari tabel HTML tetap dipertahankan, termasuk
+	// Target Tagihan, Pembayaran Masuk, Sisa, dan Realisasi pada laporan bulanan/tahunan.
+	// Ringkasan dipindah ke A:B seperti file Excel contoh.
+	function spp_angka_ringkasan_excel(nilai) {
+		if (typeof nilai === 'number' && isFinite(nilai)) return nilai;
+		if (typeof nilai === 'string' && /^-?\d+(?:\.\d+)?$/.test(nilai.trim())) {
+			return Number(nilai.trim());
+		}
+		return null;
+	}
+
+	function spp_ringkasan_excel(baris, header) {
+		var hasil = [];
+		baris.forEach(function(row) {
+			if (!Array.isArray(row) || row.length === 0) return;
+			var iLabel = row.findIndex(function(v, index) {
+				return typeof v === 'string' && v.trim() !== '' && row.slice(index + 1).some(function(sisa) {
+					return spp_angka_ringkasan_excel(sisa) !== null;
+				});
+			});
+			if (iLabel < 0) return;
+			var label = String(row[iLabel]).trim();
+			if (label.toUpperCase() === 'TOTAL') {
+				for (var k = iLabel + 1; k < row.length; k++) {
+					var nilaiTotal = spp_angka_ringkasan_excel(row[k]);
+					if (nilaiTotal === null) continue;
+					var nama = String(header[k] || 'Total');
+					if (/^realisasi/i.test(nama)) nama = 'Realisasi (%)';
+					else if (/^nominal tagihan$/i.test(nama)) nama = 'Total Tagihan';
+					else if (!/^total/i.test(nama)) nama = 'Total ' + nama;
+					hasil.push({label: nama, value: nilaiTotal});
+				}
+			} else {
+				for (var i = iLabel + 1; i < row.length; i++) {
+					var angka = spp_angka_ringkasan_excel(row[i]);
+					if (angka === null) continue;
+					hasil.push({label: label, value: angka});
+					break;
+				}
+			}
+		});
+		return hasil;
+	}
+
+	function spp_tabel_excel_terstruktur(selector) {
+		var semua = spp_baca_tabel_excel(selector);
+		var header = semua[0] || [];
+		var pemisah = semua.findIndex(function(row, index) {
+			return index > 0 && Array.isArray(row) && row.length === 0;
+		});
+		var isi = pemisah >= 0 ? semua.slice(1, pemisah) : semua.slice(1);
+		var ringkasan = pemisah >= 0 ? semua.slice(pemisah + 1) : [];
+		return {header: header, isi: isi, ringkasan: spp_ringkasan_excel(ringkasan, header)};
+	}
+
+	// Tata letak mengikuti contoh laporan_pembayaran_20261021.xlsx:
+	// A1 judul, baris 2 kosong, metadata A:B, satu baris pemisah,
+	// tabel di bawahnya, kemudian ringkasan pada A:B sesudah tabel.
+	// Tidak merubah nilai dari tabel HTML maupun perhitungan controller.
+	function spp_warnai_excel(worksheet, data, barisHeader, ringkasanMulai, engine) {
+		var header = data[barisHeader] || [];
+		var cols = header.map(function(label) {
+			return {wch: spp_lebar_kolom_excel(label)};
+		});
+		var panjangLabel = 0;
+		var panjangNilai = 0;
+		for (var m = 2; m < barisHeader - 1; m++) {
+			panjangLabel = Math.max(panjangLabel, String((data[m] || [])[0] || '').length);
+			panjangNilai = Math.max(panjangNilai, String((data[m] || [])[1] || '').length);
+		}
+		if (ringkasanMulai >= 0) {
+			for (var r = ringkasanMulai; r < data.length; r++) {
+				panjangLabel = Math.max(panjangLabel, String((data[r] || [])[0] || '').length);
+			}
+		}
+		if (cols.length) cols[0].wch = Math.max(cols[0].wch, Math.min(34, panjangLabel + 3), 19);
+		if (cols.length > 1) cols[1].wch = Math.max(cols[1].wch, Math.min(42, panjangNilai + 3), 22);
+		worksheet['!cols'] = cols;
+		worksheet['!rows'] = worksheet['!rows'] || [];
+		worksheet['!rows'][0] = {hpt: 22};
+		worksheet['!rows'][barisHeader] = {hpt: 22};
+
+		function cellAt(row, col) {
+			return worksheet[engine.utils.encode_cell({r: row, c: col})];
+		}
+		// Format nilai, tetapi pertahankan tipe asli NIS/nomor transaksi/tanggal.
+		var formatRupiah = '"Rp"#,##0;[Red]("Rp"#,##0);"Rp"0';
+		for (var i = barisHeader + 1; i < data.length; i++) {
+			if (ringkasanMulai >= 0 && i >= ringkasanMulai) break;
+			for (var j = 0; j < header.length; j++) {
+				var cell = cellAt(i, j);
+				if (!cell || cell.t !== 'n') continue;
+				var jenis = spp_jenis_angka_excel(header[j]);
+				cell.z = jenis === 'rupiah' ? formatRupiah :
+					(jenis === 'persen' ? '0.00"%"' : '#,##0');
+			}
+		}
+		if (ringkasanMulai >= 0) {
+			for (var k = ringkasanMulai; k < data.length; k++) {
+				var nilai = cellAt(k, 1);
+				if (!nilai || nilai.t !== 'n') continue;
+				var label = String((data[k] || [])[0] || '');
+				var jenisRingkas = spp_jenis_angka_excel(label);
+				nilai.z = jenisRingkas === 'rupiah' ? formatRupiah :
+					(jenisRingkas === 'persen' ? '0.00"%"' : '#,##0');
+			}
+		}
+		// Gaya sederhana seperti contoh; SheetJS existing tetap menghasilkan
+		// nilai dan lebar kolom walau versinya tidak mendukung font/border.
+		var judul = cellAt(0, 0);
+		if (judul) judul.s = {font: {bold: true}, alignment: {horizontal: 'left'}};
+		for (var h = 0; h < header.length; h++) {
+			var kepala = cellAt(barisHeader, h);
+			if (kepala) kepala.s = {font: {bold: true}};
+		}
+	}
+
+	function spp_buat_excel_rapi(selector, judul, lembar, namaFile, filter, metadata) {
+		var tabel = spp_tabel_excel_terstruktur(selector);
+		var daftarMeta = Object.assign({}, metadata || {});
+		var adaPeriode = Object.keys(daftarMeta).some(function(key) {
+			return key.toLowerCase() === 'periode';
+		});
+		if (!adaPeriode && namaFile !== 'riwayat_pembatalan' && namaFile !== 'laporan_per_jenis_tagihan' && namaFile !== 'laporan_tunggakan') {
+			daftarMeta = Object.assign({'Periode': spp_periode_excel(filter)}, daftarMeta);
+		}
+		var kunciMeta = Object.keys(daftarMeta).map(function(k) { return k.toLowerCase(); });
+		if (kunciMeta.indexOf('dicetak') < 0 && kunciMeta.indexOf('tanggal ekspor') < 0) {
+			var sekarang = new Date();
+			daftarMeta['Tanggal Ekspor'] = String(sekarang.getDate()).padStart(2, '0') + '-' +
+				String(sekarang.getMonth() + 1).padStart(2, '0') + '-' + sekarang.getFullYear();
+		}
+		if (kunciMeta.indexOf('petugas') < 0) {
+			daftarMeta['Petugas'] = <?= json_encode((string) ($this->session->userdata('admin')['nama'] ?? $this->session->userdata('admin')['username'] ?? '-')); ?>;
+		}
+		// Nama metadata mengikuti susunan Excel contoh: label dan nilai.
+		// Isi pencetak dari kode existing tetap dipertahankan.
+		var data = [[String(judul)], []];
+		Object.keys(daftarMeta).forEach(function(label) {
+			var nama = /^dicetak$/i.test(label) ? 'Tanggal Ekspor' : label;
+			data.push([nama, String(daftarMeta[label] == null ? '' : daftarMeta[label])]);
+		});
+		data.push([]);
+		var barisHeader = data.length;
+		data.push(tabel.header);
+		data = data.concat(tabel.isi);
+		var ringkasanMulai = -1;
+		if (tabel.ringkasan.length) {
+			data.push([]);
+			ringkasanMulai = data.length;
+			tabel.ringkasan.forEach(function(item) {
+				data.push([item.label, item.value]);
+			});
+		}
+		spp_engine_excel_spp(function(engine) {
+			try {
+				var worksheet = engine.utils.aoa_to_sheet(data);
+				spp_warnai_excel(worksheet, data, barisHeader, ringkasanMulai, engine);
+				var workbook = engine.utils.book_new();
+				engine.utils.book_append_sheet(workbook, worksheet, lembar);
+				var suffix = namaFile === 'riwayat_pembatalan'
+					? 'ta_' + spp_nama_tahun_ajaran_file(daftarMeta['Tahun Ajaran']) + '_siswa_' + String(filter.spp_id_siswa_pembatalan || 'semua')
+					: spp_suffix_file_excel(filter);
+				engine.writeFile(workbook, namaFile + '_' + suffix + '.xlsx');
+			} catch (err) {
+				console.error('Ekspor Excel SPP:', err);
+				alert('Gagal membuat Excel. Silakan coba kembali.');
+			}
+		});
+	}
+
+	// Informasi pencetak tetap disertakan pada empat laporan yang memilikinya sebelumnya.
+	function spp_metadata_pencetak_excel(metadata, waktuCetak) {
+		var hasil = Object.assign({}, metadata || {});
+		hasil['Dicetak'] = waktuCetak || new Date().toLocaleString('id-ID');
+		hasil['Petugas'] = <?= json_encode((string) ($this->session->userdata('admin')['nama'] ?? $this->session->userdata('admin')['username'] ?? '-')); ?>;
+		return hasil;
+	}
+
+	function spp_simpan_excel(selector, judul, namaFile, filter, meta) {
+		spp_buat_excel_rapi(selector, judul, judul.substring(0, 31), namaFile, filter, meta);
+	}
+
+	// Laporan Pembayaran - AJAX mengisi tabel HTML, lalu fungsi Excel membaca tabel.
+    function data_spp_pembayaran(selesai) {
+        var dataPost = spp_filter_excel();
+        if (!spp_validasi_excel(dataPost)) return;
+        spp_kosongkan_tabel_excel('#data_spp_pembayaran');
+        spp_loading_excel(true);
+
+        $.ajax({
+            url: '<?= base_url('admin/laporan/laporan_pembayaran_spp'); ?>',
+            type: 'POST',
+            data: dataPost,
+            dataType: 'JSON',
+            success: function(data) {
+                if (data.result !== 'true') {
+                    alert(data.message || 'Filter laporan tidak valid.');
+                    return;
+                }
+                var groupedByTanggal = data.grouped_by_tanggal || {};
+                if (Object.keys(groupedByTanggal).length === 0) {
+                    alert('Tidak ada data untuk diekspor.');
+                    return;
+                }
+                // Status filter Pembayaran disembunyikan; default controller adalah Aktif.
+                // Header 10 kolom sudah ditetapkan pada HTML #data_spp_pembayaran.
+
+                var tableRows = [];
+                var no = 1;
+                Object.keys(groupedByTanggal).forEach(function(tanggal) {
+                    var transaksiList = groupedByTanggal[tanggal];
+                    transaksiList.forEach(function(item, index) {
+                        // Tanggal tetap ditampilkan pada setiap baris transaksi, seperti format cetak.
+                        var cells = [no++, tanggal, item.waktu_transaksi || '-',
+                            item.no_transaksi || '-', item.nama_siswa || '-', item.nama_kelas || '-',
+                            item.jenis_tagihan || '-', item.nama_metode_pembayaran || '-', item.nama_user || '-'];
+                        cells.push(Number(item.total_pembayaran || 0));
+                        tableRows.push(cells);
+                    });
+                });
+
+                var numericColumns = [0, 9];
+                var summaryRows = Object.keys(data.summary || {}).map(function(label) {
+                    var cells = Array(10).fill('');
+                    cells[8] = label;
+                    cells[9] = data.summary[label];
+                    return {cells: cells, numericColumns: [9]};
+                });
+                spp_isi_tabel_excel('#data_spp_pembayaran',
+					tableRows,
+					numericColumns,
+					summaryRows);
+                if (typeof selesai === 'function') selesai(dataPost, data.filters || {});
+            },
+            error: function(xhr) {
+                var pesan = xhr.responseJSON && xhr.responseJSON.message ?
+                    xhr.responseJSON.message : 'Gagal mengambil data laporan pembayaran (HTTP ' + xhr.status + ').';
+                console.error('Laporan Pembayaran:', xhr.status, xhr.responseText);
+                alert(pesan);
+            },
+            complete: function() {
+                spp_loading_excel(false);
+            }
+        });
+    }
+
+    function excel_spp_pembayaran(filter, meta) {
+        spp_simpan_excel('#data_spp_pembayaran', 'Laporan Pembayaran', 'laporan_pembayaran', filter, meta);
+    }
+
+	// Laporan Tagihan Per Siswa: satu dataset untuk Cetak dan Excel,
+	// empat tabel rincian mengikuti bagian A/B/C/D pada hasil Cetak.
+	var sppHasilTagihanPerSiswa = null;
+	function data_spp_per_siswa(selesai) {
+		var idTahun = $('#sppTahunAjaranSiswa').val();
+		if (!idTahun) {
+			alert('Silakan pilih Tahun Ajaran.');
+			return;
+		}
+		        var idSiswa = $('#sppLaporanSiswa').val();
+        if (!idSiswa) {
+            alert('Silakan pilih salah satu Siswa.');
+            return;
+        }
+        var dataPost = {spp_id_periode_siswa: idTahun, spp_id_siswa: idSiswa};
+		['#data_spp_per_siswa', '#data_spp_pembayaran_siswa', '#data_spp_cicilan_siswa', '#data_spp_tunggakan_siswa'].forEach(spp_kosongkan_tabel_excel);
+		spp_loading_excel(true);
+		$.ajax({
+			url: '<?= base_url('admin/laporan/laporan_per_siswa_spp'); ?>',
+			type: 'POST', dataType: 'JSON', data: dataPost,
+			success: function(response) {
+				var siswaList = response.siswa_data || [];
+				if (!Array.isArray(siswaList) || !siswaList.length) {
+					alert('Tidak ada data untuk diekspor.'); return;
+				}
+				sppHasilTagihanPerSiswa = response;
+				var daftarTagihan = [], daftarBayar = [], daftarCicilan = [], daftarLama = [];
+				siswaList.forEach(function(siswa) {
+					(siswa.tagihan || []).forEach(function(item, i) {
+						daftarTagihan.push([i+1, siswa.nama_siswa, siswa.nis, siswa.nama_kelas,
+							item.nama_tagihan, item.nama_jenis_tagihan, item.nama_bulan || '-',
+							item.status_pembayaran, Number(item.target_efektif || 0),
+							Number(item.total_pembayaran || 0), Number(item.sisa_efektif || 0)]);
+					});
+					(siswa.pembayaran || []).forEach(function(item, i) {
+						daftarBayar.push([i+1, siswa.nama_siswa, siswa.nis,
+							item.tanggal_transaksi, item.no_transaksi, item.nama_tagihan,
+							item.nama_bulan || '-', item.nama_metode_pembayaran,
+							Number(item.nominal_bayar || 0)]);
+					});
+					(siswa.cicilan || []).forEach(function(item, i) {
+						daftarCicilan.push([i+1, siswa.nama_siswa, siswa.nis,
+							item.tanggal_transaksi, item.no_transaksi, item.nama_tagihan,
+							item.nama_bulan || '-', Number(item.cicilan_ke || 0),
+							item.nama_metode_pembayaran, Number(item.nominal_bayar || 0),
+							Number(item.sisa_setelah || 0)]);
+					});
+					(siswa.tunggakan_sebelumnya || []).forEach(function(item, i) {
+						daftarLama.push([i+1, siswa.nama_siswa, siswa.nis, item.tahun_asal,
+							item.nama_kelas, item.nama_tagihan, item.tanggal_jatuh_tempo || '-',
+							Number(item.sisa_tagihan || 0)]);
+					});
+				});
+				spp_isi_tabel_excel('#data_spp_per_siswa', daftarTagihan, [0,8,9,10], []);
+				spp_isi_tabel_excel('#data_spp_pembayaran_siswa', daftarBayar, [0,8], []);
+				spp_isi_tabel_excel('#data_spp_cicilan_siswa', daftarCicilan, [0,7,9,10], []);
+				spp_isi_tabel_excel('#data_spp_tunggakan_siswa', daftarLama, [0,7], []);
+				if (typeof selesai === 'function') selesai(dataPost);
+			},
+			error: function(xhr) {
+				console.error('Laporan Per Siswa:', xhr.status, xhr.responseText);
+				alert('Gagal mengambil data laporan.');
+			},
+			complete: function() { spp_loading_excel(false); }
+		});
+	}
+
+	function excel_spp_per_siswa(filter) {
+		var hasil = sppHasilTagihanPerSiswa;
+		if (!hasil || !Array.isArray(hasil.siswa_data) || !hasil.siswa_data.length) return;
+		var daftarSiswa = hasil.siswa_data;
+		var petugas = <?= json_encode((string) ($this->session->userdata('admin')['nama'] ?? $this->session->userdata('admin')['username'] ?? '-')); ?>;
+		var waktu = new Date().toLocaleString('id-ID');
+		var tahun = hasil.tahun_ajaran || '-';
+		var formatUang = '"Rp"#,##0;[Red]("Rp"#,##0);"Rp"0';
+
+		// Satu worksheet, dengan tabel A/B/C/D berurutan seperti halaman Cetak.
+		// Data tetap berasal dari tabel Excel yang sudah diisi AJAX laporan per siswa.
+		var bagian = [
+			{judul: 'A. SELURUH TAGIHAN SISWA (TAHUN AJARAN ' + tahun + ')',
+				selector: '#data_spp_per_siswa',
+				header: ['No', 'Nama Tagihan', 'Jenis Tagihan', 'Bulan', 'Status', 'Tagihan', 'Dibayar', 'Sisa'],
+				ambil: [0, 4, 5, 6, 7, 8, 9, 10], uang: [5, 6, 7],
+				kosong: 'Tidak ada tagihan pada tahun ajaran ini.'},
+			{judul: 'B. SELURUH PEMBAYARAN SISWA',
+				selector: '#data_spp_pembayaran_siswa',
+				header: ['No', 'Tanggal', 'No Transaksi', 'Nama Tagihan', 'Bulan', 'Metode', 'Nominal Pembayaran'],
+				ambil: [0, 3, 4, 5, 6, 7, 8], uang: [6],
+				kosong: 'Belum ada pembayaran aktif.'},
+			{judul: 'C. RIWAYAT CICILAN',
+				selector: '#data_spp_cicilan_siswa',
+				header: ['No', 'Tanggal', 'No Transaksi', 'Nama Tagihan', 'Bulan', 'Cicilan Ke', 'Metode', 'Nominal Cicilan', 'Sisa Setelah Bayar'],
+				ambil: [0, 3, 4, 5, 6, 7, 8, 9, 10], uang: [7, 8],
+				kosong: 'Tidak ada riwayat cicilan.'},
+			{judul: 'D. TUNGGAKAN TAHUN AJARAN SEBELUMNYA',
+				selector: '#data_spp_tunggakan_siswa',
+				header: ['No', 'Tahun Asal', 'Kelas Asal', 'Nama Tagihan', 'Jatuh Tempo', 'Total Tunggakan'],
+				ambil: [0, 3, 4, 5, 6, 7], uang: [5],
+				kosong: 'Tidak ada tunggakan tahun ajaran sebelumnya.'}
+		];
+
+		spp_engine_excel_spp(function(engine) {
+			try {
+				if (!engine || !engine.utils) throw new Error('SheetJS tidak tersedia');
+				var data = [];
+				var barisJudul = [];
+				var barisHeader = [];
+				var selUang = [];
+				var lebar = [7, 24, 28, 38, 20, 23, 24, 21, 24];
+
+				function tambahJudul(teks) {
+					barisJudul.push(data.length);
+					data.push([teks]);
+				}
+				function tambahBagian(bagianData) {
+					data.push([]);
+					tambahJudul(bagianData.judul);
+					barisHeader.push(data.length);
+					data.push(bagianData.header);
+					var isi = spp_baca_tabel_excel(bagianData.selector).slice(1).filter(function(row) {
+						return Array.isArray(row) && row.length > 0;
+					});
+					if (!isi.length) {
+						data.push([bagianData.kosong]);
+						return;
+					}
+					isi.forEach(function(row) {
+						var indeks = data.length;
+						data.push(bagianData.ambil.map(function(k) { return row[k]; }));
+						bagianData.uang.forEach(function(k) { selUang.push({r: indeks, c: k}); });
+					});
+				}
+
+				// Filter laporan memang mewajibkan tepat satu siswa.
+				var siswa = daftarSiswa[0];
+				var ringkasan = siswa.ringkasan || {};
+				tambahJudul('LAPORAN TAGIHAN PER SISWA');
+				data.push([]);
+				data.push(['Tahun Ajaran', tahun]);
+				data.push(['Nama Siswa', siswa.nama_siswa || '-']);
+				data.push(['NIS', String(siswa.nis || '')]);
+				data.push(['Kelas', siswa.nama_kelas || '-']);
+				data.push(['Tanggal Ekspor', waktu]);
+				data.push(['Petugas', petugas]);
+				data.push([]);
+				tambahJudul('RINGKASAN KEUANGAN SISWA');
+				barisHeader.push(data.length);
+				data.push(['Total Tagihan', 'Total Pembayaran', 'Total Sisa Tagihan', 'Tunggakan Tahun Sebelumnya']);
+				var indeksRingkasan = data.length;
+				data.push([Number(ringkasan.total_tagihan || 0),
+					Number(ringkasan.total_pembayaran || 0),
+					Number(ringkasan.total_sisa || 0),
+					Number(ringkasan.tunggakan_sebelumnya || 0)]);
+				for (var j = 0; j < 4; j++) selUang.push({r: indeksRingkasan, c: j});
+				bagian.forEach(tambahBagian);
+				data.push([]);
+
+				var worksheet = engine.utils.aoa_to_sheet(data);
+				worksheet['!cols'] = lebar.map(function(wch) { return {wch: wch}; });
+				worksheet['!merges'] = barisJudul.map(function(i) {
+					return {s: {r: i, c: 0}, e: {r: i, c: 8}};
+				});
+				worksheet['!rows'] = worksheet['!rows'] || [];
+				barisJudul.forEach(function(i) {
+					worksheet['!rows'][i] = {hpt: 24};
+					var cell = worksheet[engine.utils.encode_cell({r: i, c: 0})];
+					if (cell) cell.s = {font: {bold: true, sz: i === 0 ? 15 : 12}};
+				});
+				barisHeader.forEach(function(i) {
+					worksheet['!rows'][i] = {hpt: 22};
+					(data[i] || []).forEach(function(_, j) {
+						var cell = worksheet[engine.utils.encode_cell({r: i, c: j})];
+						if (cell) cell.s = {font: {bold: true}};
+					});
+				});
+				selUang.forEach(function(pos) {
+					var cell = worksheet[engine.utils.encode_cell(pos)];
+					if (cell && cell.t === 'n') cell.z = formatUang;
+				});
+				var workbook = engine.utils.book_new();
+				engine.utils.book_append_sheet(workbook, worksheet, 'Laporan Tagihan Per Siswa');
+				var labelTahun = spp_nama_tahun_ajaran_file(tahun);
+				var suffixSiswa = String(siswa.nis || siswa.id_siswa || 'siswa').replace(/[^A-Za-z0-9_-]/g, '_');
+				engine.writeFile(workbook, 'laporan_tagihan_per_siswa_tahun_ajaran_' + labelTahun + '_siswa_' + suffixSiswa + '.xlsx');
+			} catch (err) {
+				console.error('Gagal ekspor Laporan Per Siswa', err);
+				alert('Gagal membuat Excel. Silakan coba kembali.');
+			}
+		});
+	}
+
+	// Laporan Tagihan Per Kelas - AJAX mengisi tabel HTML, lalu fungsi Excel membaca tabel.
+	function data_spp_per_kelas(selesai) {
+		var dataPost = spp_filter_excel();
+		if (!spp_validasi_excel(dataPost)) return;
+		spp_kosongkan_tabel_excel('#data_spp_per_kelas');
+		spp_loading_excel(true);
+
+		$.ajax({
+			url: '<?= base_url('admin/laporan/laporan_per_kelas_spp'); ?>',
+			type: 'POST',
+			dataType: 'JSON',
+			data: dataPost,
+			success: function(response) {
+				var rows = response.data_laporan || [];
+				if (!Array.isArray(rows) || rows.length === 0) {
+					alert('Tidak ada data untuk diekspor.');
+					return;
+				}
+				var tableRows = [];
+				rows.forEach(function(item, index) {
+					tableRows.push([index + 1, item.nama_kelas, Number(item.jumlah_siswa || 0), Number(item.total_tagihan || 0), Number(item.total_dibayar || 0), Number(item.total_sisa || 0), Number(item.realisasi || 0)]);
+				});
+				spp_isi_tabel_excel('#data_spp_per_kelas',
+					tableRows,
+					[0, 2, 3, 4, 5, 6],
+					[{
+						cells: ["", "", "TOTAL", Number(response.total_tagihan || 0), Number(response.total_dibayar || 0), Number(response.total_sisa || 0), Number(response.total_realisasi || 0)],
+						numericColumns: [3, 4, 5, 6]
+					}]);
+				var periodeLaporan = dataPost.filter === 'tanggal' ?
+					formatTanggal(dataPost.dari_tanggal) + ' s/d ' + formatTanggal(dataPost.sampai_tanggal) :
+					(dataPost.filter === 'bulan' ? getNamaBulan(dataPost.bulan) + ' ' + dataPost.tahun :
+						'Tahun ' + dataPost.single_filter_tahun);
+				var metadata = {
+					'Periode': periodeLaporan,
+					'Tahun Ajaran': $('#form-spp-filter-periode-kelas select option:selected').text().trim(),
+					'Jenis Tagihan': $('#form-spp-filter-jenis select option:selected').text().trim()
+				};
+				if (typeof selesai === 'function') selesai(dataPost, metadata);
+			},
+			error: function(xhr) {
+				alert('Gagal mengambil data laporan.');
+			},
+			complete: function() {
+				spp_loading_excel(false);
+			}
+		});
+	}
+
+	function excel_spp_per_kelas(filter, metadata) {
+		spp_simpan_excel('#data_spp_per_kelas', 'Laporan Tagihan Per Kelas', 'laporan_tagihan_per_kelas', filter, metadata);
+	}
+
+	// Laporan Per Jenis Tagihan - AJAX mengisi tabel HTML, lalu fungsi Excel membaca tabel.
+	function data_spp_per_jenis(selesai) {
+		var dataPost = {
+			spp_id_periode_jenis: $('#sppTahunAjaranJenis').val(),
+			spp_id_kelas_jenis: $('#sppKelasJenis').val() || ''
+		};
+		if (!dataPost.spp_id_periode_jenis) {
+			alert('Silakan pilih Tahun Ajaran.');
+			return;
+		}
+		spp_kosongkan_tabel_excel('#data_spp_per_jenis');
+		spp_loading_excel(true);
+
+		$.ajax({
+			url: '<?= base_url('admin/laporan/laporan_per_jenis_tagihan_spp'); ?>',
+			type: 'POST',
+			dataType: 'JSON',
+			data: dataPost,
+			success: function(response) {
+				var rows = response.data_laporan || [];
+				if (!Array.isArray(rows) || rows.length === 0) {
+					alert('Tidak ada data untuk diekspor.');
+					return;
+				}
+				var tableRows = [];
+				rows.forEach(function(item, index) {
+					tableRows.push([index + 1, item.nama_jenis_tagihan, item.nama_tagihan || '-',
+						Number(item.jumlah_siswa || 0), Number(item.total_target || 0),
+						Number(item.total_pembayaran || 0), Number(item.total_sisa || 0),
+						Number(item.realisasi || 0)]);
+				});
+				spp_isi_tabel_excel('#data_spp_per_jenis', tableRows, [0, 3, 4, 5, 6, 7], [
+					{ cells: ['', '', '', '', '', '', 'Total Target Tagihan', Number(response.total_target || 0)], numericColumns: [7] },
+					{ cells: ['', '', '', '', '', '', 'Total Pembayaran', Number(response.total_pembayaran || 0)], numericColumns: [7] },
+					{ cells: ['', '', '', '', '', '', 'Total Sisa', Number(response.total_sisa || 0)], numericColumns: [7] },
+					{ cells: ['', '', '', '', '', '', 'Persentase Realisasi', Number(response.total_realisasi || 0)], numericColumns: [7] }
+				]);
+				var metadataJenis = {
+					'Tahun Ajaran': $('#sppTahunAjaranJenis option:selected').text().trim(),
+					'Kelas': $('#sppKelasJenis option:selected').text().trim()
+				};
+				if (typeof selesai === 'function') selesai(dataPost, metadataJenis);
+			},
+			error: function() {
+				alert('Gagal mengambil data laporan.');
+			},
+			complete: function() {
+				spp_loading_excel(false);
+			}
+		});
+	}
+
+	function excel_spp_per_jenis(filter, metadata) {
+		// Nama Tahun Ajaran dari label pilihan, tidak menggunakan ID periode.
+		var filterNamaFile = Object.assign({}, filter, {
+			filter: 'tahun',
+			single_filter_tahun: 'ajaran_' + spp_nama_tahun_ajaran_file(metadata['Tahun Ajaran']) +
+				'_kelas_' + String(filter.spp_id_kelas_jenis || 'semua')
+		});
+		spp_buat_excel_rapi('#data_spp_per_jenis', 'LAPORAN PER JENIS TAGIHAN',
+			'Laporan Per Jenis', 'laporan_per_jenis_tagihan', filterNamaFile,
+			spp_metadata_pencetak_excel(metadata));
+	}
+
+	// Laporan Tunggakan: data diambil lewat AJAX, dimasukkan tabel HTML, lalu dibuat Excel.
+	function data_spp_tunggakan(selesai) {
+		var dataPost = {
+			spp_id_periode_tunggakan: $('#sppTahunAjaranTunggakan').val() || '',
+			spp_id_kelas_tunggakan: $('#sppKelasTunggakan').val() || '',
+			spp_id_jenis_tunggakan: $('#form-spp-filter-jenis-tunggakan select').val() || ''
+		};
+		spp_kosongkan_tabel_excel('#data_spp_tunggakan');
+		spp_loading_excel(true);
+
+		$.ajax({
+			url: '<?= base_url('admin/laporan/laporan_tunggakan_spp'); ?>',
+			type: 'POST',
+			dataType: 'JSON',
+			data: dataPost,
+			success: function(response) {
+				if (response.result !== 'true') {
+					alert(response.message || 'Filter laporan tidak valid.');
+					return;
+				}
+				var rows = response.rows || [];
+				if (!Array.isArray(rows) || rows.length === 0) {
+					alert('Tidak ada data untuk diekspor.');
+					return;
+				}
+				var dataRows = rows.map(function(item, index) {
+					return [index + 1, item.nama_siswa, item.nis, item.nama_kelas,
+						item.tahun_asal, Number(item.jumlah_tagihan || 0),
+						Number(item.total_tunggakan || 0)];
+				});
+				var summary = response.summary || {};
+				spp_isi_tabel_excel('#data_spp_tunggakan',
+					dataRows,
+					[0, 5, 6],
+					[
+						{ cells: ['', '', '', '', '', 'Jumlah Siswa', Number(summary['Jumlah Siswa'] || 0)], numericColumns: [6] },
+						{ cells: ['', '', '', '', '', 'Total Tunggakan', Number(summary['Total Tunggakan'] || 0)], numericColumns: [6] }
+					]);
+				if (typeof selesai === 'function') selesai(dataPost, response.filters || {});
+			},
+			error: function(xhr) {
+				alert(xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Gagal mengambil data laporan tunggakan.');
+			},
+			complete: function() {
+				spp_loading_excel(false);
+			}
+		});
+	}
+
+	function excel_spp_tunggakan(filter, metadata) {
+		// Nama file memakai label Tahun Ajaran, bukan ID database.
+		var tahunFile = metadata['Tahun Ajaran'] === 'Semua Tahun Ajaran' ? 'semua'
+			: spp_nama_tahun_ajaran_file(metadata['Tahun Ajaran']);
+		var kelasFile = metadata['Kelas'] === 'Semua Kelas' ? 'semua'
+			: spp_nama_tahun_ajaran_file(metadata['Kelas']).toLowerCase();
+		var jenisFile = metadata['Jenis Tagihan'] === 'Semua Jenis' ? 'semua'
+			: spp_nama_tahun_ajaran_file(metadata['Jenis Tagihan']).toLowerCase();
+		var filterNamaFile = Object.assign({}, filter, {
+			filter: 'tahun',
+			single_filter_tahun: 'ajaran_' + tahunFile + '_kelas_' + kelasFile + '_jenis_' + jenisFile
+		});
+		spp_buat_excel_rapi('#data_spp_tunggakan', 'LAPORAN TUNGGAKAN',
+			'Laporan Tunggakan', 'laporan_tunggakan', filterNamaFile,
+			spp_metadata_pencetak_excel(metadata));
+	}
+
+	// Laporan Tabungan: AJAX POST -> tabel HTML -> Excel, seperti laporan existing.
+	function data_spp_tabungan(selesai) {
+		var dataPost = spp_filter_excel();
+		if (!spp_validasi_excel(dataPost)) return;
+		spp_kosongkan_tabel_excel('#data_spp_tabungan');
+		spp_loading_excel(true);
+
+		$.ajax({
+			url: '<?= base_url('admin/laporan/laporan_tabungan_spp'); ?>',
+			type: 'POST',
+			dataType: 'JSON',
+			data: dataPost,
+			success: function(response) {
+				if (response.result === 'false') {
+					alert(response.message || 'Filter laporan tidak valid.');
+					return;
+				}
+				var rows = response.data_laporan || [];
+				var tableRows = [];
+				rows.forEach(function(item, index) {
+					tableRows.push([
+						index + 1, item.tanggal_transaksi, item.no_transaksi, item.jenis,
+						item.nama_siswa, item.nama_kelas,
+						item.metode_pembayaran, item.status_transaksi,
+						item.nama_user, Number(item.nominal || 0)
+					]);
+				});
+				if (!tableRows.length) {
+					tableRows.push(['', 'Tidak ada data', '',  '', '', '', '', '', '', '']);
+				}
+				spp_isi_tabel_excel('#data_spp_tabungan',
+					tableRows,
+					[0, 10],
+					[
+						{ cells: ['', '', '',  '', '', '', '', '', 'TOTAL SETORAN AKTIF', Number(response.total_setoran || 0)], numericColumns: [10] },
+						{ cells: ['', '', '', '', '', '', '', '', 'TOTAL PENARIKAN AKTIF', Number(response.total_penarikan || 0)], numericColumns: [10] },
+						// { cells: ['', '', '', '', '', '', '', '', '', 'SALDO BERSIH', Number(response.saldo || 0)], numericColumns: [10] }
+					]);
+				if (typeof selesai === 'function') selesai(dataPost, response.filters || {});
+			},
+			error: function(xhr) {
+				alert('Gagal mengambil data laporan Tabungan (HTTP ' + xhr.status + ').');
+			},
+			complete: function() {
+				spp_loading_excel(false);
+			}
+		});
+	}
+
+	function excel_spp_tabungan(filter, metadata) {
+		spp_buat_excel_rapi('#data_spp_tabungan', 'LAPORAN TABUNGAN',
+			'Laporan Tabungan', 'laporan_tabungan', filter,
+			spp_metadata_pencetak_excel(metadata));
+	}
+
+	// Laporan Pembatalan: AJAX -> tabel HTML -> Excel (mengikuti pola laporan existing).
+	function data_spp_pembatalan(selesai) {
+		var dataPost = {
+			spp_id_periode_pembatalan: $('#sppTahunAjaranPembatalan').val(),
+			spp_id_siswa_pembatalan: $('#sppSiswaPembatalan').val() || ''
+		};
+		if (!dataPost.spp_id_periode_pembatalan) {
+			alert('Silakan pilih Tahun Ajaran.');
+			return;
+		}
+		spp_kosongkan_tabel_excel('#data_spp_pembatalan');
+		spp_loading_excel(true);
+
+		$.ajax({
+			url: '<?= base_url('admin/laporan/laporan_pembatalan_spp'); ?>',
+			type: 'POST',
+			dataType: 'JSON',
+			data: dataPost,
+			success: function(response) {
+				if (response.result === 'false') {
+					alert(response.message || 'Filter laporan tidak valid.');
+					return;
+				}
+				var rows = response.data_laporan || [];
+				var tableRows = [];
+				rows.forEach(function(item, index) {
+					tableRows.push([
+						index + 1,
+						item.no_transaksi || '',
+						item.nama_siswa || '',
+						item.nis || '',
+						Number(item.total_pembayaran || 0),
+						item.nama_user_transaksi || '',
+						item.nama_user_pembatalan || '',
+						[item.tanggal_pembatalan, item.waktu_pembatalan].filter(Boolean).join(' '),
+						item.alasan_pembatalan || ''
+					]);
+				});
+
+				spp_isi_tabel_excel('#data_spp_pembatalan',
+					tableRows,
+					[0, 4],
+					[
+						{ cells: ['', '', '', '', '', '', '', 'Jumlah Pembatalan', Number(response.jumlah_pembatalan || 0)], numericColumns: [8] },
+						{ cells: ['', '', '', '', '', '', '', 'Total Dibatalkan', Number(response.total_dibatalkan || 0)], numericColumns: [8] }
+					]);
+				if (typeof selesai === 'function') selesai(dataPost, response.filters || {}, tableRows.length);
+			},
+			error: function(xhr) {
+				alert(xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Gagal mengambil data laporan pembatalan.');
+			},
+			complete: function() {
+				spp_loading_excel(false);
+			}
+		});
+	}
+
+	function excel_spp_pembatalan(filter, metadata, jumlahBaris) {
+		spp_buat_excel_rapi('#data_spp_pembatalan', 'RIWAYAT PEMBATALAN',
+			'Riwayat Pembatalan', 'riwayat_pembatalan', filter,
+			spp_metadata_pencetak_excel(metadata));
+	}
+
 	function klik_laporan(nama, path) {
+		if (path === 'admin/dompet/laporan_dompet') {
+			window.location.href = '<?php echo base_url(); ?>' + path;
+			return;
+		}
+
+		reset_form_laporan_spp();
+
 		$("#printLaporan").modal('show');
 		$('#myLargeModalLabel').html(nama);
 		$('#path').val(path);
@@ -1259,12 +2846,151 @@
 		let link = '<?php echo base_url(); ?>' + path;
 		$('#form_laporan').attr('action', link);
 
-		if (nama == 'Laporan Jurnal Harian') {
+		if (nama == 'Laporan Pembayaran') {
+			$('#filter-data').show();
+			$('#filter_hari').prop('checked', true);
+			$('#form-hari').show();
+			$('#form-bulan').hide();
+			$('#form-tahun').hide();
+			$('#form-jurnal-harian').hide();
+			$('#form-jurnal-guru').hide();
+			$('#form-jurnal-kegiatan').hide();
+			$('#form-pegawai-all').hide();
+			$('#form-pegawai-all-absen').hide();
+			$('#form-resume-tanggal').hide();
+			$('#form-semester-tahun-ajaran').hide();
+			$('#btn_print_laporan_excel').show().val('spp_pembayaran').prop('disabled', false)
+				.html('<i class="fa fa-file-excel me-1"></i> Excel');
+			$('#form-spp-filter-periode-pembayaran').show().find('select').prop('disabled', false);
+			$('#form-spp-filter-kelas').show().find('select').prop('disabled', false);
+			$('#form-spp-filter-jenis').show().find('select').attr('name', 'spp_id_jenis_tagihan').prop('disabled', false);
+			$('#form-spp-filter-metode').show().find('select').prop('disabled', false);
+			$('#form-spp-filter-kasbank').show().find('select').prop('disabled', false);
+			$('#sppTahunAjaranPembayaran').trigger('change');
+			return;
+		} else if (nama == 'Laporan Tagihan Per Siswa') {
+			$('#filter-data').hide();
+			$('#filter_hari').prop('checked', true);
+			$('#form-hari').hide();
+			$('#form-bulan').hide();
+			$('#form-tahun').hide();
+			$('#form-jurnal-harian').hide();
+			$('#form-jurnal-guru').hide();
+			$('#form-jurnal-kegiatan').hide();
+			$('#form-pegawai-all').hide();
+			$('#form-pegawai-all-absen').hide();
+			$('#form-resume-tanggal').hide();
+			$('#form-semester-tahun-ajaran').hide();
+			$('#btn_print_laporan_excel').show().val('spp_per_siswa').prop('disabled', false)
+				.html('<i class="fa fa-file-excel me-1"></i> Excel');
+			$('#form-spp-filter-periode-siswa').show().find('select').prop('disabled', false);
+			            $('#form-spp-filter-siswa').show().find('select').attr('name', 'spp_id_siswa').prop('disabled', false);
+            $('#sppLaporanSiswa').val('').trigger('change');
+			return;
+		} else if (nama == 'Laporan Tagihan Per Kelas') {
+			$('#filter-data').show();
+			$('#filter_hari').prop('checked', true);
+			$('#form-hari').show();
+			$('#form-bulan').hide();
+			$('#form-tahun').hide();
+			$('#form-jurnal-harian').hide();
+			$('#form-jurnal-guru').hide();
+			$('#form-jurnal-kegiatan').hide();
+			$('#form-pegawai-all').hide();
+			$('#form-pegawai-all-absen').hide();
+			$('#form-resume-tanggal').hide();
+			$('#form-semester-tahun-ajaran').hide();
+			$('#btn_print_laporan_excel').show().val('spp_per_kelas').prop('disabled', false)
+				.html('<i class="fa fa-file-excel me-1"></i> Excel');
+			$('#form-spp-filter-periode-kelas').show().find('select').prop('disabled', false);
+			$('#form-spp-filter-jenis').show().find('select').attr('name', 'spp_id_jenis_tagihan_kelas').prop('disabled', false);
+			return;
+		} else if (nama == 'Laporan Per Jenis Tagihan') {
+			$('#filter-data').hide();
+			$('#filter_hari').prop('checked', true);
+			$('#form-hari').hide();
+			$('#form-bulan').hide();
+			$('#form-tahun').hide();
+			$('#form-jurnal-harian').hide();
+			$('#form-jurnal-guru').hide();
+			$('#form-jurnal-kegiatan').hide();
+			$('#form-pegawai-all').hide();
+			$('#form-pegawai-all-absen').hide();
+			$('#form-resume-tanggal').hide();
+			$('#form-semester-tahun-ajaran').hide();
+			$('#btn_print_laporan_excel').show().val('spp_per_jenis').prop('disabled', false)
+				.html('<i class="fa fa-file-excel me-1"></i> Excel');
+			$('#form-spp-filter-periode-jenis').show().find('select').prop('disabled', false);
+			$('#form-spp-filter-kelas-jenis').show().find('select').prop('disabled', false);
+			$('#sppTahunAjaranJenis').trigger('change');
+			return;
+		} else if (nama == 'Laporan Tunggakan') {
+			$('#filter-data').hide();
+			$('#filter_hari').prop('checked', true);
+			$('#form-hari').hide();
+			$('#form-bulan').hide();
+			$('#form-tahun').hide();
+			$('#form-jurnal-harian').hide();
+			$('#form-jurnal-guru').hide();
+			$('#form-jurnal-kegiatan').hide();
+			$('#form-pegawai-all').hide();
+			$('#form-pegawai-all-absen').hide();
+			$('#form-resume-tanggal').hide();
+			$('#form-semester-tahun-ajaran').hide();
+			$('#btn_print_laporan_excel').show().val('spp_tunggakan').prop('disabled', false)
+				.html('<i class="fa fa-file-excel me-1"></i> Excel');
+			$('#form-spp-filter-periode-tunggakan').show().find('select').prop('disabled', false);
+			$('#form-spp-filter-kelas-tunggakan').show().find('select').prop('disabled', false);
+			$('#form-spp-filter-jenis-tunggakan').show().find('select').prop('disabled', false);
+			// Status siswa tetap Aktif (default laporan sebelumnya), tanpa pilihan filter.
+			$('#sppTahunAjaranTunggakan').trigger('change');
+			return;
+		} else if (nama == 'Laporan Tabungan') {
+			$('#filter-data').show();
+			$('#filter_hari').prop('checked', true);
+			$('#form-hari').show();
+			$('#form-bulan').hide();
+			$('#form-tahun').hide();
+			$('#form-jurnal-harian').hide();
+			$('#form-jurnal-guru').hide();
+			$('#form-jurnal-kegiatan').hide();
+			$('#form-pegawai-all').hide();
+			$('#form-pegawai-all-absen').hide();
+			$('#form-resume-tanggal').hide();
+			$('#form-semester-tahun-ajaran').hide();
+			$('#btn_print_laporan_excel').show().val('spp_tabungan').prop('disabled', false)
+				.html('<i class="fa fa-file-excel me-1"></i> Excel');
+			$('#form-spp-filter-periode-tabungan').show().find('select').prop('disabled', false);
+			$('#form-spp-filter-kelas-tabungan').show().find('select').prop('disabled', false);
+			$('#form-spp-filter-jenis-tabungan').show().find('select').prop('disabled', false);
+			$('#form-spp-filter-status-tabungan').show().find('select').prop('disabled', false);
+			$('#sppTahunAjaranTabungan').trigger('change');
+			return;
+		} else if (nama == 'Laporan Pembatalan') {
+			$('#filter-data').hide();
+			$('#form-hari').hide();
+			$('#form-bulan').hide();
+			$('#form-tahun').hide();
+			$('#form-jurnal-harian').hide();
+			$('#form-jurnal-guru').hide();
+			$('#form-jurnal-kegiatan').hide();
+			$('#form-pegawai-all').hide();
+			$('#form-pegawai-all-absen').hide();
+			$('#form-resume-tanggal').hide();
+			$('#form-semester-tahun-ajaran').hide();
+			$('#btn_print_laporan_excel').show().val('spp_pembatalan').prop('disabled', false)
+				.html('<i class="fa fa-file-excel me-1"></i> Excel');
+			$('#form-spp-filter-periode-pembatalan').show().find('select').prop('disabled', false);
+			$('#form-spp-filter-siswa-pembatalan').show().find('select').prop('disabled', false);
+			$('#sppTahunAjaranPembatalan').trigger('change');
+			return;
+		} else if (nama == 'Laporan Jurnal Harian') {
 			$('#filter-data').show();
 			$('#form-hari').click().show();
 			$('#form-bulan').hide();
 			$('#form-tahun').hide();
 			$('#form-jurnal-harian').show();
+			$('#form-jurnal-guru').hide();
 			$('#btn_print_laporan_excel').hide();
 			$('#form-resume-tanggal').hide();
 			$('#form-semester-tahun-ajaran').hide();
@@ -1303,6 +3029,7 @@
 			$('#form-tahun').hide();
 			$('#form-jurnal-harian').hide();
 			$('#form-jurnal-guru').hide();
+			$('#form-pegawai-all').show();
 			$('#form-pegawai-all-absen').hide();
 			$('#form-jurnal-kegiatan').hide();
 			$('#btn_print_laporan_excel').show();
@@ -1322,7 +3049,7 @@
 			$('#form-jurnal-kegiatan').hide();
 			$('#form-semester-tahun-ajaran').hide();
 			$('#btn_print_laporan_excel').show();
-			$('#btn_print_laporan_excel').val('Guru');
+			updateValExcel();
 
 		} else if (nama == 'Laporan Presensi Pegawai') {
 			$('#filter-data').show();
@@ -1591,7 +3318,7 @@
 			$('#btn_print_laporan_excel').val('daftar_penerimaan_gaji');
 			$('#form-resume-tanggal').hide();
 			$('#form-semester-tahun-ajaran').hide();
-		} else if (nama == 'Laporan Daftar Gaji Guru Dan Karyawan') {
+		} else if (nama == 'Laporan Payroll Gaji Guru Dan Karyawan') {
 			$('#filter-data').hide();
 			$('#form-hari').hide();
 			$('#form-bulan').show();
@@ -1601,8 +3328,8 @@
 			$('#form-jurnal-kegiatan').hide();
 			$('#form-pegawai-all').hide();
 			$('#form-pegawai-all-absen').hide();
-			$('#btn_print_laporan_excel').hide();
-			$('#btn_print_laporan_excel').val('laporan_daftar_gaji_guru_dan_karyawan');
+			$('#btn_print_laporan_excel').show();
+			$('#btn_print_laporan_excel').val('laporan_payroll_gaji_guru_dan_karyawan');
 			$('#form-resume-tanggal').hide();
 			$('#form-semester-tahun-ajaran').hide();
 		} else {
@@ -1611,7 +3338,7 @@
 			$('#form-jurnal-guru-tanggal').hide();
 		}
 
-		$('#laporan_presensi_siswa_filter').change(function () {
+		$('#laporan_presensi_siswa_filter').change(function() {
 			var val = this.value;
 			if (val == 1) {
 				$("#laporan_presensi_siswa_filter_bulan").hide();
@@ -1670,7 +3397,7 @@
 			type: 'POST',
 			data: dataPost,
 			dataType: 'JSON',
-			success: function (data) {
+			success: function(data) {
 				let no = 1;
 				let html = '';
 
@@ -1811,7 +3538,7 @@
 					$('.excel-container').removeClass('has-nama-col');
 
 
-					data.forEach(function (item) {
+					data.forEach(function(item) {
 						const dtKeg = parseDate(item.tanggal);
 						const dtIn = parseDate(item.tanggal_input);
 						const sameDay = (dtKeg && dtIn) ? (fmtDMY(dtKeg) === fmtDMY(dtIn)) : false;
@@ -1853,7 +3580,7 @@
 				$('#data_jurnal_pegawai').html(html);
 			},
 
-			error: function (xhr, status, error) {
+			error: function(xhr, status, error) {
 				console.error('AJAX Error:', status, error);
 				$('#data_jurnal_pegawai').html('<div style="padding:10px; text-align:center; color:red;">Gagal memuat data</div>');
 			}
@@ -1912,15 +3639,26 @@
 		const tahun = $('select[name="filter_tahun"]').val();
 		const single_filter_tahun = $('select[name="single_filter_tahun"]').val();
 
-		const dataPost = { dari_tanggal, sampai_tanggal, bulan, tahun, single_filter_tahun, filter, id_kelas, semester, periode };
+		const dataPost = {
+			dari_tanggal,
+			sampai_tanggal,
+			bulan,
+			tahun,
+			single_filter_tahun,
+			filter,
+			id_kelas,
+			semester,
+			periode
+		};
 
 		$.ajax({
 			url: '<?= base_url('admin/laporan/laporan_jurnal_guru_kelas'); ?>',
 			type: 'POST',
 			data: dataPost,
 			dataType: 'JSON',
-			success: function (data) {
-				let no = 1, table = '';
+			success: function(data) {
+				let no = 1,
+					table = '';
 
 				if (!data || Object.keys(data).length === 0) {
 					table = '<tr><td colspan="8" class="text-center">Tidak ada data</td></tr>';
@@ -1928,7 +3666,7 @@
 					return;
 				}
 
-				Object.keys(data).forEach(function (namaGuru) {
+				Object.keys(data).forEach(function(namaGuru) {
 					const mapelList = data[namaGuru] || {};
 
 					let totalBaris = 0;
@@ -1949,10 +3687,10 @@
 
 					let guruRowspanAdded = false;
 
-					Object.keys(mapelList).forEach(function (mapel) {
+					Object.keys(mapelList).forEach(function(mapel) {
 						const jadwalList = mapelList[mapel] || [];
 
-						jadwalList.forEach(function (item) {
+						jadwalList.forEach(function(item) {
 							const tglMengajarStr = (item.tanggal || '').trim();
 							const tglInputStr = (item.tanggal_input || '').trim();
 							const tglMengajar = parseDMY(tglMengajarStr);
@@ -1960,7 +3698,8 @@
 
 							const expectedFillDate = tglMengajar ? new Date(tglMengajar.getTime()) : null;
 
-							let daysLate = 0, isLate = false;
+							let daysLate = 0,
+								isLate = false;
 							if (tglMengajar && tglInput) {
 								daysLate = diffDays(tglMengajar, tglInput);
 								isLate = (daysLate > 0) && (tglInput > tglMengajar);
@@ -1990,14 +3729,14 @@
 								const expectedStr = expectedFillDate ? formatDMY(expectedFillDate) : (tglMengajarStr || '-');
 								const inputStr = tglInput ? formatDMY(tglInput) : '-';
 
-								const note = `Seharusnya diisi: <b>${expectedStr}</b> <span class="badge-late">BELUM DIISI</span>`
-									+ (tglInput ? ` — <span class="text-muted">Diinput: ${inputStr}</span>` : '');
+								const note = `Seharusnya diisi: <b>${expectedStr}</b> <span class="badge-late">BELUM DIISI</span>` +
+									(tglInput ? ` — <span class="text-muted">Diinput: ${inputStr}</span>` : '');
 
 
 								table += '<tr class="row-note">';
 
-								table += '<td></td>';         // Mata Pelajaran (kosong)
-								table += '<td></td>';         // Kelas (kosong)
+								table += '<td></td>'; // Mata Pelajaran (kosong)
+								table += '<td></td>'; // Kelas (kosong)
 								table += `<td colspan="4" style="text-align: center;">${note}</td>`; // Jam + Kegiatan + Tema + Tanggal Mengajar
 								table += '</tr>';
 							}
@@ -2007,7 +3746,7 @@
 
 				$('#data_jurnal_guru_kelas tbody').html(table);
 			},
-			error: function () {
+			error: function() {
 				$('#data_jurnal_guru_kelas tbody').html(
 					'<tr><td colspan="8" class="text-center">Gagal memuat data</td></tr>'
 				);
@@ -2031,6 +3770,7 @@
 		var bulan = $('select[name="filter_bulan"]').val();
 		var tahun = $('select[name="filter_tahun"]').val();
 		var single_filter_tahun = $('select[name="single_filter_tahun"]').val();
+		var id_pegawai = $('select[name="id_pegawai_all"]').val();
 		var dataPost = {
 			dari_tanggal,
 			sampai_tanggal,
@@ -2038,6 +3778,7 @@
 			tahun,
 			single_filter_tahun,
 			filter,
+			id_pegawai,
 		};
 
 		$.ajax({
@@ -2045,7 +3786,7 @@
 			type: 'POST',
 			data: dataPost,
 			dataType: 'JSON',
-			success: function (data) {
+			success: function(data) {
 
 				var no = 1;
 				var table = '';
@@ -2053,12 +3794,12 @@
 					table = '<tr><td colspan="8" class="text-center">Tidak ada data</td ></tr > ';
 				} else {
 
-					Object.keys(data).forEach(function (tanggal) {
+					Object.keys(data).forEach(function(tanggal) {
 						let jadwalList = data[tanggal];
 						let totalBaris = jadwalList.length;
 						let guruRowspanAdded = false;
 
-						jadwalList.forEach(function (item, index) {
+						jadwalList.forEach(function(item, index) {
 							table += '<tr>';
 
 							if (!guruRowspanAdded) {
@@ -2080,13 +3821,15 @@
 			}
 		});
 	}
-	function data_resume_tanggal_kegiatan() {
+
+	function data_resume_tanggal_kegiatan(onSelesai) {
 		var filter = $('input[name="filter"]:checked').val();
 		var dari_tanggal = $('input[name="dari_tanggal"]').val();
 		var sampai_tanggal = $('input[name="sampai_tanggal"]').val();
 		var bulan = $('select[name="filter_bulan"]').val();
 		var tahun = $('select[name="filter_tahun"]').val();
 		var single_filter_tahun = $('select[name="single_filter_tahun"]').val();
+		var id_periode = $('select[name="id_periode_resume_tanggal"]').val();
 
 		var dataPost = {
 			dari_tanggal,
@@ -2095,14 +3838,39 @@
 			tahun,
 			single_filter_tahun,
 			filter,
+			id_periode
 		};
+
+		if (filter === 'tanggal' && (!dari_tanggal || !sampai_tanggal)) {
+			alert('Pastikan tanggal sudah dipilih.');
+			resetTombolExcel();
+			return;
+		}
+
+		if (filter === 'bulan' && (!bulan || !tahun)) {
+			alert('Pastikan bulan dan tahun dipilih.');
+			resetTombolExcel();
+			return;
+		}
+
+		if (filter === 'tahun' && !single_filter_tahun) {
+			alert('Pastikan tahun dipilih.');
+			resetTombolExcel();
+			return;
+		}
+
+		if (!id_periode) {
+			alert('Pastikan tahun ajaran dipilih.');
+			resetTombolExcel();
+			return;
+		}
 
 		$.ajax({
 			url: '<?= base_url('admin/laporan/laporan_resume_tanggal_kegiatan_belum_diisi'); ?>',
 			type: 'POST',
 			data: dataPost,
 			dataType: 'JSON',
-			success: function (resp) {
+			success: function(resp) {
 				// Jika server kirim wrapper { data: {...}, meta: {...} }
 				var data = resp.data || resp;
 
@@ -2113,13 +3881,21 @@
 					$('#periode').text(resp.meta.periode || '-');
 				}
 
-				var esc = function (s) {
-					return String(s ?? '').replace(/[&<>"']/g, function (m) {
-						return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]);
+				var esc = function(s) {
+					return String(s ?? '').replace(/[&<>"']/g, function(m) {
+						return ({
+							'&': '&amp;',
+							'<': '&lt;',
+							'>': '&gt;',
+							'"': '&quot;',
+							"'": '&#039;'
+						} [m]);
 					});
 				};
 
-				var names = Object.keys(data).filter(function (k) { return k !== 'meta'; });
+				var names = Object.keys(data).filter(function(k) {
+					return k !== 'meta';
+				});
 
 				var table = '';
 				var no = 1;
@@ -2128,9 +3904,14 @@
 					table = '<tr><td colspan="5" class="text-center">Tidak ada data</td></tr>';
 				} else {
 					// Urutkan nama pegawai (natural)
-					names.sort(function (a, b) { return a.localeCompare(b, 'id', { numeric: true, sensitivity: 'base' }); });
+					names.sort(function(a, b) {
+						return a.localeCompare(b, 'id', {
+							numeric: true,
+							sensitivity: 'base'
+						});
+					});
 
-					names.forEach(function (nama) {
+					names.forEach(function(nama) {
 						var item = data[nama] || {};
 						var semester = item.semester ?? '-';
 						var periode = item.periode ?? '-';
@@ -2140,8 +3921,9 @@
 						if (!dates.length) return;
 
 						// Urutkan tanggal dd-mm-YYYY
-						dates.sort(function (a, b) {
-							var pa = a.split('-'), pb = b.split('-');
+						dates.sort(function(a, b) {
+							var pa = a.split('-'),
+								pb = b.split('-');
 							// y-m-d untuk pembandingan
 							var da = new Date(pa[2] + '-' + pa[1] + '-' + pa[0]);
 							var db = new Date(pb[2] + '-' + pb[1] + '-' + pb[0]);
@@ -2150,7 +3932,7 @@
 
 						var rowspan = dates.length;
 
-						dates.forEach(function (tgl, idx) {
+						dates.forEach(function(tgl, idx) {
 							table += '<tr>';
 							if (idx === 0) {
 								table += '<td rowspan="' + rowspan + '">' + (no++) + '</td>';
@@ -2174,31 +3956,58 @@
 				}
 
 				$('#data_resume_tanggal_kegiatan tbody').html(table);
+
+				if (typeof onSelesai === 'function') {
+					onSelesai();
+				}
+			},
+			error: function(xhr) {
+				console.error(xhr.responseText);
+				alert('Gagal mengambil data resume tanggal jurnal karyawan.');
+				resetTombolExcel();
 			}
 		});
 	}
 
-	function data_resume_tanggal_jurnal() {
+	function data_resume_tanggal_jurnal(onSelesai) {
 		const filter = $('input[name="filter"]:checked').val();
 		const dari_tanggal = $('input[name="dari_tanggal"]').val();
 		const sampai_tanggal = $('input[name="sampai_tanggal"]').val();
 		const bulan = $('select[name="filter_bulan"]').val();
 		const tahun = $('select[name="filter_tahun"]').val();
 		const single_filter_tahun = $('select[name="single_filter_tahun"]').val();
+		const id_periode = $('select[name="id_periode_resume_tanggal"]').val();
 
-		const dataPost = { dari_tanggal, sampai_tanggal, bulan, tahun, single_filter_tahun, filter };
+		const dataPost = {
+			dari_tanggal,
+			sampai_tanggal,
+			bulan,
+			tahun,
+			single_filter_tahun,
+			filter,
+			id_periode
+		};
 
 		// Validasi sederhana
 		if (filter === 'tanggal' && (!dari_tanggal || !sampai_tanggal)) {
-			alert('Pastikan tanggal sudah dipilih 1.');
+			alert('Pastikan tanggal sudah dipilih.');
+			resetTombolExcel();
 			return;
 		}
 		if (filter === 'bulan' && (!bulan || !tahun)) {
 			alert('Pastikan bulan dan tahun dipilih.');
+			resetTombolExcel();
 			return;
 		}
 		if (filter !== 'tanggal' && filter !== 'bulan' && !single_filter_tahun) {
 			alert('Pastikan tahun dipilih.');
+			resetTombolExcel();
+			return;
+		}
+
+		if (id_periode === '') {
+			alert('Pastikan tahun ajaran dipilih.');
+			resetTombolExcel();
 			return;
 		}
 
@@ -2210,7 +4019,7 @@
 			type: 'POST',
 			data: dataPost,
 			dataType: 'JSON',
-			success: function (resp) {
+			success: function(resp) {
 				const payload = (resp && typeof resp === 'object') ? (resp.data || resp) : {};
 				const meta = resp && resp.meta ? resp.meta : null;
 
@@ -2222,16 +4031,28 @@
 
 				const esc = (s) =>
 					String(s ?? '').replace(/[&<>"']/g, (m) =>
-						({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m])
+						({
+							'&': '&amp;',
+							'<': '&lt;',
+							'>': '&gt;',
+							'"': '&quot;',
+							"'": '&#039;'
+						} [m])
 					);
 
 				let names = Object.keys(payload).filter((k) => k !== 'meta');
 				if (!names.length) {
 					$tbody.html('<tr><td colspan="7" class="text-center">Tidak ada data</td></tr>');
+					if (typeof onSelesai === 'function') {
+						onSelesai();
+					}
 					return;
 				}
 
-				names.sort((a, b) => a.localeCompare(b, 'id', { numeric: true, sensitivity: 'base' }));
+				names.sort((a, b) => a.localeCompare(b, 'id', {
+					numeric: true,
+					sensitivity: 'base'
+				}));
 
 				let html = '';
 				let no = 1;
@@ -2247,7 +4068,8 @@
 					if (!dates.length) return;
 
 					dates.sort((a, b) => {
-						const pa = a.split('-'), pb = b.split('-');
+						const pa = a.split('-'),
+							pb = b.split('-');
 						const da = new Date(pa[2] + '-' + pa[1] + '-' + pa[0]);
 						const db = new Date(pb[2] + '-' + pb[1] + '-' + pb[0]);
 						return da - db;
@@ -2278,9 +4100,14 @@
 				}
 
 				$tbody.html(html);
+
+				if (typeof onSelesai === 'function') {
+					onSelesai();
+				}
 			},
-			error: function () {
+			error: function() {
 				$tbody.html('<tr><td colspan="7" class="text-center text-danger">Gagal memuat data</td></tr>');
+				resetTombolExcel();
 			},
 		});
 	}
@@ -2308,19 +4135,19 @@
 			type: 'POST',
 			data: dataPost,
 			dataType: 'JSON',
-			success: function (data) {
+			success: function(data) {
 				var no = 1;
 				var table = '';
 				if (Object.keys(data).length === 0) {
 					table = '<tr><td colspan="8" class="text-center">Tidak ada data</td></tr>';
 				} else {
 
-					Object.keys(data).forEach(function (tanggal) {
+					Object.keys(data).forEach(function(tanggal) {
 						let jadwalList = data[tanggal];
 						let totalBaris = jadwalList.length;
 						let guruRowspanAdded = false;
 
-						jadwalList.forEach(function (item, index) {
+						jadwalList.forEach(function(item, index) {
 							$('#tampil_pegawai').val(item.tampil_pegawai);
 							table += '<tr>';
 
@@ -2359,6 +4186,7 @@
 			}
 		});
 	}
+
 	function data_presensi_keterlambatan_pegawai() {
 		var filter = $('input[name="filter"]:checked').val();
 		var dari_tanggal = $('input[name="dari_tanggal"]').val();
@@ -2380,19 +4208,19 @@
 			type: 'POST',
 			data: dataPost,
 			dataType: 'JSON',
-			success: function (data) {
+			success: function(data) {
 				var no = 1;
 				var table = '';
 				if (Object.keys(data).length === 0) {
 					table = '<tr><td colspan="8" class="text-center">Tidak ada data</td></tr>';
 				} else {
 
-					Object.keys(data).forEach(function (tanggal) {
+					Object.keys(data).forEach(function(tanggal) {
 						let jadwalList = data[tanggal];
 						let totalBaris = jadwalList.length;
 						let guruRowspanAdded = false;
 
-						jadwalList.forEach(function (item, index) {
+						jadwalList.forEach(function(item, index) {
 							table += '<tr>';
 
 							if (!guruRowspanAdded) {
@@ -2440,7 +4268,7 @@
 			type: 'POST',
 			data: dataPost,
 			dataType: 'JSON',
-			success: function (data) {
+			success: function(data) {
 				var no = 1;
 				var table = '';
 				const presensi = data.data;
@@ -2452,7 +4280,7 @@
 					table = '<tr><td colspan="8" class="text-center">Tidak ada data</td></tr>';
 				} else {
 
-					Object.keys(presensi).forEach(function (tanggal) {
+					Object.keys(presensi).forEach(function(tanggal) {
 						const item = presensi[tanggal];
 
 						table += '<tr>';
@@ -2489,6 +4317,7 @@
 	let masterPotonganGlobal = [];
 	let rekap_persenUigUik = 0;
 	let rekap_persenZakat = 0;
+
 	function formatPersen(value) {
 		value = parseFloat(value) || 0;
 
@@ -2498,6 +4327,7 @@
 
 		return value.toString().replace('.', ',');
 	}
+
 	function data_rekapitulasi_gaji() {
 		var filter = $('input[name="filter"]:checked').val();
 		var dari_tanggal = $('input[name="dari_tanggal"]').val();
@@ -2519,7 +4349,7 @@
 			type: 'POST',
 			data: dataPost,
 			dataType: 'JSON',
-			success: function (data) {
+			success: function(data) {
 				var no = 1;
 				var table = '';
 
@@ -2595,6 +4425,7 @@
 	}
 
 	let tanggal_laporan_kas = '';
+
 	function data_laporan_kas() {
 		var filter = $('input[name="filter"]:checked').val();
 		var dari_tanggal = $('input[name="dari_tanggal"]').val();
@@ -2616,7 +4447,7 @@
 			type: 'POST',
 			data: dataPost,
 			dataType: 'JSON',
-			success: function (data) {
+			success: function(data) {
 				let table = '';
 				tanggal_laporan_kas = data.tanggal_laporan;
 				if (data.status == 'Tahun') {
@@ -2795,6 +4626,7 @@
 		});
 	}
 	let tanggal_laporan_penggunaan_anggaran = '';
+
 	function data_laporan_penggunaan_anggaran() {
 		var filter = $('input[name="filter"]:checked').val();
 		var dari_tanggal = $('input[name="dari_tanggal"]').val();
@@ -2816,7 +4648,7 @@
 			type: 'POST',
 			data: dataPost,
 			dataType: 'JSON',
-			success: function (data) {
+			success: function(data) {
 				let table = '';
 				tanggal_laporan_penggunaan_anggaran = data.tanggal_laporan;
 				if (data.data_laporan.length > 0) {
@@ -2878,6 +4710,7 @@
 		});
 	}
 	let tanggal_laporan_rencana_anggaran = '';
+
 	function data_laporan_rencana_anggaran() {
 		var filter = $('input[name="filter"]:checked').val();
 		var dari_tanggal = $('input[name="dari_tanggal"]').val();
@@ -2899,7 +4732,7 @@
 			type: 'POST',
 			data: dataPost,
 			dataType: 'JSON',
-			success: function (data) {
+			success: function(data) {
 				let table = '';
 				tanggal_laporan_rencana_anggaran = data.tanggal_laporan;
 				if (data.pengeluaran.length > 0) {
@@ -2918,9 +4751,7 @@
 							${parseInt(data.saldo_bulan_lalu || 0)}
 							</b>
 						</td>`;
-						}
-
-						else if (index == 1) {
+						} else if (index == 1) {
 
 							table += `
 						<td><b>Pengajuan Anggaran</b></td>
@@ -2930,9 +4761,7 @@
 							${parseInt(data.pengajuan_anggaran || 0)}
 							</b>
 						</td>`;
-						}
-
-						else {
+						} else {
 
 							table += `
 						<td></td>
@@ -2980,6 +4809,7 @@
 		});
 	}
 	let tanggal_laporan_pos = '';
+
 	function data_laporan_pos() {
 		var filter = $('input[name="filter"]:checked').val();
 		var dari_tanggal = $('input[name="dari_tanggal"]').val();
@@ -3001,7 +4831,7 @@
 			type: 'POST',
 			data: dataPost,
 			dataType: 'JSON',
-			success: function (data) {
+			success: function(data) {
 				let table = '';
 				tanggal_laporan_pos = data.tanggal_laporan;
 				if (data.data_pos.length == 0) {
@@ -3082,6 +4912,7 @@
 		return bulanArr[bulan] || bulan;
 	}
 	let tahun_ajaran_asumsi = '';
+
 	function data_laporan_rencana_asumsi_pemasukan() {
 		var filter = $('input[name="filter"]:checked').val();
 		var dari_tanggal = $('input[name="dari_tanggal"]').val();
@@ -3090,7 +4921,7 @@
 		var tahun = $('select[name="filter_tahun"]').val();
 
 		var semester = $('#form-semester-tahun-ajaran select[name="semester"]').val();
-		var id_periode = $('#form-semester-tahun-ajaran select[name="id_periode"]').val();
+		var id_periode = $('#form-semester-tahun-ajaran select[name="id_periode_form_semester"]').val();
 		var single_filter_tahun = $('select[name="single_filter_tahun"]').val();
 		var dataPost = {
 			dari_tanggal,
@@ -3108,7 +4939,7 @@
 			type: 'POST',
 			data: dataPost,
 			dataType: 'JSON',
-			success: function (data) {
+			success: function(data) {
 				tahun_ajaran_asumsi = data.tahun_ajaran || '';
 				let header = '';
 				header += `
@@ -3237,6 +5068,7 @@
 	}
 
 	let tahun_ajaran_rencana_pengeluaran = '';
+
 	function data_laporan_rencana_pengeluaran() {
 		var filter = $('input[name="filter"]:checked').val();
 		var dari_tanggal = $('input[name="dari_tanggal"]').val();
@@ -3244,7 +5076,7 @@
 		var bulan = $('select[name="filter_bulan"]').val();
 		var tahun = $('select[name="filter_tahun"]').val();
 		var semester = $('#form-semester-tahun-ajaran select[name="semester"]').val();
-		var id_periode = $('#form-semester-tahun-ajaran select[name="id_periode"]').val();
+		var id_periode = $('#form-semester-tahun-ajaran select[name="id_periode_form_semester"]').val();
 		var single_filter_tahun = $('select[name="single_filter_tahun"]').val();
 		var dataPost = {
 			dari_tanggal,
@@ -3262,7 +5094,7 @@
 			type: 'POST',
 			data: dataPost,
 			dataType: 'JSON',
-			success: function (data) {
+			success: function(data) {
 				tahun_ajaran_rencana_pengeluaran = data.tahun_ajaran || '';
 				let table = '';
 				let bulanNama = {
@@ -3283,7 +5115,7 @@
 				// HEADER
 				let thead = `<tr><th>Kategori</th>`;
 
-				data.list_bulan.forEach(function (bulan) {
+				data.list_bulan.forEach(function(bulan) {
 					thead += `<th>${bulanNama[bulan]}</th>`;
 				});
 				thead += `<th>Total</th>`;
@@ -3296,7 +5128,7 @@
 
 				let total_bulan = {};
 
-				data.list_bulan.forEach(function (bulan) {
+				data.list_bulan.forEach(function(bulan) {
 					total_bulan[bulan] = 0;
 				});
 
@@ -3310,11 +5142,11 @@
 			</tr>`;
 
 				} else {
-					data.data_laporan.forEach(function (r) {
+					data.data_laporan.forEach(function(r) {
 						tbody += `<tr><td>${r.keterangan}</td>`;
 
 						let total_baris = 0;
-						data.list_bulan.forEach(function (bulan) {
+						data.list_bulan.forEach(function(bulan) {
 							let nilai = parseFloat(r['bulan_' + bulan]) || 0;
 
 							total_bulan[bulan] += nilai;
@@ -3339,7 +5171,7 @@
 					// TOTAL
 					let grand_total = 0;
 					tbody += `<tr><td align="center"><b>Jumlah</b></td>`;
-					data.list_bulan.forEach(function (bulan) {
+					data.list_bulan.forEach(function(bulan) {
 						grand_total += total_bulan[bulan];
 						tbody += `
 		<td align="right">
@@ -3362,6 +5194,7 @@
 	}
 
 	let tahun_ajaran = '';
+
 	function data_laporan_rencana_pemasukan() {
 		var filter = $('input[name="filter"]:checked').val();
 		var dari_tanggal = $('input[name="dari_tanggal"]').val();
@@ -3369,7 +5202,7 @@
 		var bulan = $('select[name="filter_bulan"]').val();
 		var tahun = $('select[name="filter_tahun"]').val();
 		var semester = $('#form-semester-tahun-ajaran select[name="semester"]').val();
-		var id_periode = $('#form-semester-tahun-ajaran select[name="id_periode"]').val();
+		var id_periode = $('#form-semester-tahun-ajaran select[name="id_periode_form_semester"]').val();
 		var single_filter_tahun = $('select[name="single_filter_tahun"]').val();
 		var dataPost = {
 			dari_tanggal,
@@ -3387,7 +5220,7 @@
 			type: 'POST',
 			data: dataPost,
 			dataType: 'JSON',
-			success: function (data) {
+			success: function(data) {
 				let table = '';
 				let total_bulan = 0;
 				let no = 1;
@@ -3502,7 +5335,7 @@
 			type: 'POST',
 			data: dataPost,
 			dataType: 'JSON',
-			success: function (data) {
+			success: function(data) {
 				let table = '';
 
 				if (data.data_laporan.length == 0) {
@@ -3538,6 +5371,7 @@
 			}
 		});
 	}
+
 	function data_laporan_olah_in() {
 		var filter = $('input[name="filter"]:checked').val();
 		var dari_tanggal = $('input[name="dari_tanggal"]').val();
@@ -3559,7 +5393,7 @@
 			type: 'POST',
 			data: dataPost,
 			dataType: 'JSON',
-			success: function (data) {
+			success: function(data) {
 				let table = '';
 				if (data.data_laporan.length == 0) {
 
@@ -3622,6 +5456,7 @@
 			}
 		});
 	}
+
 	function data_laporan_olah_out() {
 		var filter = $('input[name="filter"]:checked').val();
 		var dari_tanggal = $('input[name="dari_tanggal"]').val();
@@ -3643,7 +5478,7 @@
 			type: 'POST',
 			data: dataPost,
 			dataType: 'JSON',
-			success: function (data) {
+			success: function(data) {
 				let table = '';
 				if (data.data_laporan.length == 0) {
 
@@ -3706,6 +5541,7 @@
 		});
 	}
 	let tahun_ajaran_perbandingan_rab_pengeluaran = '';
+
 	function data_laporan_perbandingan_rencana_pengeluaran() {
 		var filter = $('input[name="filter"]:checked').val();
 		var dari_tanggal = $('input[name="dari_tanggal"]').val();
@@ -3713,7 +5549,7 @@
 		var bulan = $('select[name="filter_bulan"]').val();
 		var tahun = $('select[name="filter_tahun"]').val();
 		var single_filter_tahun = $('select[name="single_filter_tahun"]').val();
-		var id_periode = $('#form-semester-tahun-ajaran select[name="id_periode"]').val();
+		var id_periode = $('#form-semester-tahun-ajaran select[name="id_periode_form_semester"]').val();
 		var semester = $('#form-semester-tahun-ajaran select[name="semester"]').val();
 		var dataPost = {
 			dari_tanggal,
@@ -3731,7 +5567,7 @@
 			type: 'POST',
 			data: dataPost,
 			dataType: 'JSON',
-			success: function (data) {
+			success: function(data) {
 				tahun_ajaran_perbandingan_rab_pengeluaran = data.tahun_ajaran || '';
 				const namaBulan = {
 					1: 'Januari',
@@ -3860,6 +5696,7 @@
 	}
 
 	let tahun_ajaran_perbandingan_rab_pemasukan = '';
+
 	function data_laporan_perbandingan_rencana_pemasukan() {
 		var filter = $('input[name="filter"]:checked').val();
 		var dari_tanggal = $('input[name="dari_tanggal"]').val();
@@ -3868,7 +5705,7 @@
 		var tahun = $('select[name="filter_tahun"]').val();
 
 		var semester = $('#form-semester-tahun-ajaran select[name="semester"]').val();
-		var id_periode = $('#form-semester-tahun-ajaran select[name="id_periode"]').val();
+		var id_periode = $('#form-semester-tahun-ajaran select[name="id_periode_form_semester"]').val();
 		var single_filter_tahun = $('select[name="single_filter_tahun"]').val();
 		var dataPost = {
 			dari_tanggal,
@@ -3886,7 +5723,7 @@
 			type: 'POST',
 			data: dataPost,
 			dataType: 'JSON',
-			success: function (data) {
+			success: function(data) {
 				const namaBulan = {
 					1: 'Januari',
 					2: 'Februari',
@@ -4025,6 +5862,7 @@
 			}
 		});
 	}
+
 	function data_penerimaan_gaji_guru_karyawan() {
 		var filter = $('input[name="filter"]:checked').val();
 		var dari_tanggal = $('input[name="dari_tanggal"]').val();
@@ -4046,7 +5884,7 @@
 			type: 'POST',
 			data: dataPost,
 			dataType: 'JSON',
-			success: function (data) {
+			success: function(data) {
 				var laporan = data.data_laporan || [];
 				var table = '';
 				var no = 1;
@@ -4067,7 +5905,7 @@
 					</tr>
 				`;
 				} else {
-					laporan.forEach(function (items) {
+					laporan.forEach(function(items) {
 						var gaji_pokok = parseFloat(items.gaji_pokok) || 0;
 						var struktural = parseFloat(items.struktural) || 0;
 						var pendidikan = parseFloat(items.tunjangan_pendidikan) || 0;
@@ -4131,7 +5969,76 @@
 
 				$('#info_persen_tidak_hadir').text((data.persen_tidak_hadir || 0) + '%');
 			},
-			error: function (xhr) {
+			error: function(xhr) {
+				console.log(xhr.responseText);
+				alert('Gagal mengambil data penerimaan gaji guru dan karyawan.');
+			}
+		});
+	}
+
+	let tanggal_laporan_payroll = '';
+
+	function data_laporan_payroll_gaji_guru_dan_karyawan() {
+		var filter = $('input[name="filter"]:checked').val();
+		var dari_tanggal = $('input[name="dari_tanggal"]').val();
+		var sampai_tanggal = $('input[name="sampai_tanggal"]').val();
+		var bulan = $('select[name="filter_bulan"]').val();
+		var tahun = $('select[name="filter_tahun"]').val();
+		var single_filter_tahun = $('select[name="single_filter_tahun"]').val();
+		var dataPost = {
+			dari_tanggal,
+			sampai_tanggal,
+			bulan,
+			tahun,
+			single_filter_tahun,
+			filter,
+		};
+
+		$.ajax({
+			url: '<?= base_url('admin/laporan/laporan_payroll_gaji_guru_karyawan'); ?>',
+			type: 'POST',
+			data: dataPost,
+			dataType: 'JSON',
+			success: function(data) {
+				var laporan = data.data_laporan || [];
+				tanggal_laporan_payroll = data.tanggal_laporan;
+				var table = '';
+				var no = 1;
+
+				var total_gaji_bersih = parseFloat(data.total_gaji_bersih) || 0;
+
+				if (laporan.length === 0) {
+					table = `
+					<tr>
+						<td colspan="4" class="text-center">Tidak ada data</td>
+					</tr>
+				`;
+				} else {
+					laporan.forEach(function(items) {
+						var nama_pegawai = items.nama_pegawai || '-';
+						var no_rekening = items.no_rekening || '-';
+						var gaji_bersih = parseFloat(items.gaji_bersih) || 0;
+
+						table += `
+						<tr>
+							<td style="text-align:center;">${no++}</td>
+							<td>${nama_pegawai}</td>
+							<td style="text-align:right;">${no_rekening}</td>
+							<td style="text-align:right;">${gaji_bersih}</td>
+						</tr>
+					`;
+					});
+				}
+
+				$('#data_laporan_payroll_gaji_guru_karyawan tbody').html(table);
+
+				$('#total_gaji_bersih_payroll').text(total_gaji_bersih);
+
+				if (data.tanggal_laporan) {
+					$('#tanggal_laporan_payroll').text(data.tanggal_laporan);
+				}
+			},
+			error: function(xhr) {
 				console.log(xhr.responseText);
 				alert('Gagal mengambil data penerimaan gaji guru dan karyawan.');
 			}
@@ -4141,6 +6048,12 @@
 
 <!-- laporan_excel -->
 <script>
+	function resetTombolExcel() {
+		$('#btn_print_laporan_excel')
+			.attr('disabled', false)
+			.html('<i class="fa fa-file-excel me-1"></i> Excel');
+	}
+
 	function updateValExcel() {
 
 		var val = $('select[name="laporan"]').val();
@@ -4148,9 +6061,16 @@
 
 		$('#btn_print_laporan_excel').val(val);
 	}
-	document.getElementById("btn_print_laporan_excel").addEventListener("click", function () {
+	document.getElementById("btn_print_laporan_excel").addEventListener("click", function() {
 
 		var cek_btn = $('#btn_print_laporan_excel').val();
+		if (cek_btn === 'Guru' || cek_btn === 'Karyawan') {
+			if (!resumeTanggalDataSiap) {
+				return;
+			}
+			resumeTanggalDataSiap = false;
+		}
+
 		if (cek_btn == 'jurnal_kegiatan') {
 			const rows = document.querySelectorAll(".excel-container .excel-header, .excel-container .excel-row");
 			const filter = document.querySelector('input[name="filter"]:checked').value;
@@ -4170,9 +6090,31 @@
 				const ws = XLSX.utils.aoa_to_sheet(data);
 
 				const headerCols = document.querySelectorAll(".excel-container .excel-header div").length;
-				ws["!cols"] = (headerCols === 6)
-					? [{ wch: 6 }, { wch: 14 }, { wch: 28 }, { wch: 40 }, { wch: 12 }, { wch: 12 }]
-					: [{ wch: 6 }, { wch: 14 }, { wch: 40 }, { wch: 12 }, { wch: 12 }];
+				ws["!cols"] = (headerCols === 6) ?
+					[{
+						wch: 6
+					}, {
+						wch: 14
+					}, {
+						wch: 28
+					}, {
+						wch: 40
+					}, {
+						wch: 12
+					}, {
+						wch: 12
+					}] :
+					[{
+						wch: 6
+					}, {
+						wch: 14
+					}, {
+						wch: 40
+					}, {
+						wch: 12
+					}, {
+						wch: 12
+					}];
 
 
 				if (headerCols === 6) {
@@ -4191,14 +6133,32 @@
 
 						if (tanggalVal) {
 							if (spanStart !== null && (r - 1) > spanStart) {
-								merges.push({ s: { r: spanStart, c: 1 }, e: { r: r - 1, c: 1 } });
+								merges.push({
+									s: {
+										r: spanStart,
+										c: 1
+									},
+									e: {
+										r: r - 1,
+										c: 1
+									}
+								});
 							}
 							spanStart = r;
 						}
 
 
 						if (r === lastRow && spanStart !== null && r > spanStart) {
-							merges.push({ s: { r: spanStart, c: 1 }, e: { r: r, c: 1 } });
+							merges.push({
+								s: {
+									r: spanStart,
+									c: 1
+								},
+								e: {
+									r: r,
+									c: 1
+								}
+							});
 						}
 					}
 
@@ -4231,7 +6191,10 @@
 						return;
 					}
 
-					const { nama, jab } = getPegawaiInfo();
+					const {
+						nama,
+						jab
+					} = getPegawaiInfo();
 					const sub = [
 						`Tanggal: ${formatTanggal(tanggal_dari)} s/d ${formatTanggal(tanggal_sampai)}`,
 						`Nama Pegawai: ${nama}`,
@@ -4249,7 +6212,10 @@
 					let data = [];
 					var bulan = document.querySelector('select[name="filter_bulan"]').value;
 					var tahun = document.querySelector('select[name="filter_tahun"]').value;
-					const { nama, jab } = getPegawaiInfo();
+					const {
+						nama,
+						jab
+					} = getPegawaiInfo();
 					const sub = [
 						`Bulan: ${getNamaBulan(bulan)} ${tahun}`,
 						`Nama Pegawai: ${nama}`,
@@ -4266,7 +6232,10 @@
 			} else {
 				setTimeout(() => {
 					var tahun = document.querySelector('select[name="single_filter_tahun"]').value;
-					const { nama, jab } = getPegawaiInfo();
+					const {
+						nama,
+						jab
+					} = getPegawaiInfo();
 					const sub = [
 						`Tahun: ${tahun}`,
 						`Nama Pegawai: ${nama}`,
@@ -4341,8 +6310,26 @@
 								// Tutup merge sebelumnya
 								if (spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
 									// Merge kolom 0 (No) dan 1 (Guru)
-									mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-									mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+									mergeInstructions.push({
+										s: {
+											r: spanStartIndex,
+											c: 0
+										},
+										e: {
+											r: currentRowIndex - 1,
+											c: 0
+										}
+									});
+									mergeInstructions.push({
+										s: {
+											r: spanStartIndex,
+											c: 1
+										},
+										e: {
+											r: currentRowIndex - 1,
+											c: 1
+										}
+									});
 								}
 
 								// Reset merge tracker
@@ -4358,8 +6345,26 @@
 
 
 					if (spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-						mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-						mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+						mergeInstructions.push({
+							s: {
+								r: spanStartIndex,
+								c: 0
+							},
+							e: {
+								r: currentRowIndex - 1,
+								c: 0
+							}
+						});
+						mergeInstructions.push({
+							s: {
+								r: spanStartIndex,
+								c: 1
+							},
+							e: {
+								r: currentRowIndex - 1,
+								c: 1
+							}
+						});
 					}
 
 
@@ -4369,26 +6374,47 @@
 					worksheet["!merges"] = mergeInstructions;
 
 					// Set lebar kolom
-					worksheet["!cols"] = [
-						{ wch: 5 },   // No
-						{ wch: 20 },  // Guru
-						{ wch: 20 },  // Mapel
-						{ wch: 10 },  // Kelas
-						{ wch: 20 },  // Jam
-						{ wch: 30 },  // Kegiatan
-						{ wch: 30 },  // Tema
-						{ wch: 25 }   // Tanggal Mengajar
+					worksheet["!cols"] = [{
+							wch: 5
+						}, // No
+						{
+							wch: 20
+						}, // Guru
+						{
+							wch: 20
+						}, // Mapel
+						{
+							wch: 10
+						}, // Kelas
+						{
+							wch: 20
+						}, // Jam
+						{
+							wch: 30
+						}, // Kegiatan
+						{
+							wch: 30
+						}, // Tema
+						{
+							wch: 25
+						} // Tanggal Mengajar
 					];
 
 					// Wrap text
 					const range = XLSX.utils.decode_range(worksheet['!ref']);
 					for (let R = range.s.r; R <= range.e.r; ++R) {
 						for (let C = range.s.c; C <= range.e.c; ++C) {
-							const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+							const cell_address = XLSX.utils.encode_cell({
+								r: R,
+								c: C
+							});
 							const cell = worksheet[cell_address];
 							if (cell) {
 								cell.s = cell.s || {};
-								cell.s.alignment = { wrapText: true, vertical: "top" };
+								cell.s.alignment = {
+									wrapText: true,
+									vertical: "top"
+								};
 							}
 						}
 					}
@@ -4458,8 +6484,26 @@
 
 								if (spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
 
-									mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-									mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+									mergeInstructions.push({
+										s: {
+											r: spanStartIndex,
+											c: 0
+										},
+										e: {
+											r: currentRowIndex - 1,
+											c: 0
+										}
+									});
+									mergeInstructions.push({
+										s: {
+											r: spanStartIndex,
+											c: 1
+										},
+										e: {
+											r: currentRowIndex - 1,
+											c: 1
+										}
+									});
 								}
 
 
@@ -4475,8 +6519,26 @@
 
 
 					if (spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-						mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-						mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+						mergeInstructions.push({
+							s: {
+								r: spanStartIndex,
+								c: 0
+							},
+							e: {
+								r: currentRowIndex - 1,
+								c: 0
+							}
+						});
+						mergeInstructions.push({
+							s: {
+								r: spanStartIndex,
+								c: 1
+							},
+							e: {
+								r: currentRowIndex - 1,
+								c: 1
+							}
+						});
 					}
 
 
@@ -4486,26 +6548,47 @@
 					worksheet["!merges"] = mergeInstructions;
 
 
-					worksheet["!cols"] = [
-						{ wch: 5 },
-						{ wch: 20 },
-						{ wch: 20 },
-						{ wch: 10 },
-						{ wch: 20 },
-						{ wch: 30 },
-						{ wch: 30 },
-						{ wch: 25 }
+					worksheet["!cols"] = [{
+							wch: 5
+						},
+						{
+							wch: 20
+						},
+						{
+							wch: 20
+						},
+						{
+							wch: 10
+						},
+						{
+							wch: 20
+						},
+						{
+							wch: 30
+						},
+						{
+							wch: 30
+						},
+						{
+							wch: 25
+						}
 					];
 
 
 					const range = XLSX.utils.decode_range(worksheet['!ref']);
 					for (let R = range.s.r; R <= range.e.r; ++R) {
 						for (let C = range.s.c; C <= range.e.c; ++C) {
-							const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+							const cell_address = XLSX.utils.encode_cell({
+								r: R,
+								c: C
+							});
 							const cell = worksheet[cell_address];
 							if (cell) {
 								cell.s = cell.s || {};
-								cell.s.alignment = { wrapText: true, vertical: "top" };
+								cell.s.alignment = {
+									wrapText: true,
+									vertical: "top"
+								};
 							}
 						}
 					}
@@ -4572,8 +6655,26 @@
 
 								if (spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
 
-									mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-									mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+									mergeInstructions.push({
+										s: {
+											r: spanStartIndex,
+											c: 0
+										},
+										e: {
+											r: currentRowIndex - 1,
+											c: 0
+										}
+									});
+									mergeInstructions.push({
+										s: {
+											r: spanStartIndex,
+											c: 1
+										},
+										e: {
+											r: currentRowIndex - 1,
+											c: 1
+										}
+									});
 								}
 
 
@@ -4589,8 +6690,26 @@
 
 
 					if (spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-						mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-						mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+						mergeInstructions.push({
+							s: {
+								r: spanStartIndex,
+								c: 0
+							},
+							e: {
+								r: currentRowIndex - 1,
+								c: 0
+							}
+						});
+						mergeInstructions.push({
+							s: {
+								r: spanStartIndex,
+								c: 1
+							},
+							e: {
+								r: currentRowIndex - 1,
+								c: 1
+							}
+						});
 					}
 
 
@@ -4600,26 +6719,47 @@
 					worksheet["!merges"] = mergeInstructions;
 
 
-					worksheet["!cols"] = [
-						{ wch: 5 },
-						{ wch: 20 },
-						{ wch: 20 },
-						{ wch: 10 },
-						{ wch: 20 },
-						{ wch: 30 },
-						{ wch: 30 },
-						{ wch: 25 }
+					worksheet["!cols"] = [{
+							wch: 5
+						},
+						{
+							wch: 20
+						},
+						{
+							wch: 20
+						},
+						{
+							wch: 10
+						},
+						{
+							wch: 20
+						},
+						{
+							wch: 30
+						},
+						{
+							wch: 30
+						},
+						{
+							wch: 25
+						}
 					];
 
 
 					const range = XLSX.utils.decode_range(worksheet['!ref']);
 					for (let R = range.s.r; R <= range.e.r; ++R) {
 						for (let C = range.s.c; C <= range.e.c; ++C) {
-							const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+							const cell_address = XLSX.utils.encode_cell({
+								r: R,
+								c: C
+							});
 							const cell = worksheet[cell_address];
 							if (cell) {
 								cell.s = cell.s || {};
-								cell.s.alignment = { wrapText: true, vertical: "top" };
+								cell.s.alignment = {
+									wrapText: true,
+									vertical: "top"
+								};
 							}
 						}
 					}
@@ -4686,8 +6826,26 @@
 							const isNewGroup = currentNo !== lastNo || currentTanggal !== lastTanggal;
 
 							if (isNewGroup && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-								mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-								mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+								mergeInstructions.push({
+									s: {
+										r: spanStartIndex,
+										c: 0
+									},
+									e: {
+										r: currentRowIndex - 1,
+										c: 0
+									}
+								});
+								mergeInstructions.push({
+									s: {
+										r: spanStartIndex,
+										c: 1
+									},
+									e: {
+										r: currentRowIndex - 1,
+										c: 1
+									}
+								});
 							}
 
 							if (isNewGroup) {
@@ -4701,31 +6859,64 @@
 						currentRowIndex++;
 
 						if (idx === tableRows.length - 1 && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 0
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 0
+								}
+							});
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 1
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 1
+								}
+							});
 						}
 					});
 
 					const worksheet = XLSX.utils.aoa_to_sheet(data);
 					worksheet["!merges"] = mergeInstructions;
 
-					worksheet["!cols"] = [
-						{ wch: 5 },   // No
-						{ wch: 20 },  // Tanggal
-						{ wch: 25 },  // Nama Pegawai
-						{ wch: 15 },  // Keterangan
-						{ wch: 30 },
+					worksheet["!cols"] = [{
+							wch: 5
+						}, // No
+						{
+							wch: 20
+						}, // Tanggal
+						{
+							wch: 25
+						}, // Nama Pegawai
+						{
+							wch: 15
+						}, // Keterangan
+						{
+							wch: 30
+						},
 					];
 
 
 					const range = XLSX.utils.decode_range(worksheet['!ref']);
 					for (let R = range.s.r; R <= range.e.r; ++R) {
 						for (let C = range.s.c; C <= range.e.c; ++C) {
-							const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+							const cell_address = XLSX.utils.encode_cell({
+								r: R,
+								c: C
+							});
 							const cell = worksheet[cell_address];
 							if (cell) {
 								cell.s = cell.s || {};
-								cell.s.alignment = { wrapText: true, vertical: "top" };
+								cell.s.alignment = {
+									wrapText: true,
+									vertical: "top"
+								};
 							}
 						}
 					}
@@ -4790,8 +6981,26 @@
 							const isNewGroup = currentNo !== lastNo || currentTanggal !== lastTanggal;
 
 							if (isNewGroup && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-								mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-								mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+								mergeInstructions.push({
+									s: {
+										r: spanStartIndex,
+										c: 0
+									},
+									e: {
+										r: currentRowIndex - 1,
+										c: 0
+									}
+								});
+								mergeInstructions.push({
+									s: {
+										r: spanStartIndex,
+										c: 1
+									},
+									e: {
+										r: currentRowIndex - 1,
+										c: 1
+									}
+								});
 							}
 
 							if (isNewGroup) {
@@ -4805,31 +7014,64 @@
 						currentRowIndex++;
 
 						if (idx === tableRows.length - 1 && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 0
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 0
+								}
+							});
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 1
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 1
+								}
+							});
 						}
 					});
 
 					const worksheet = XLSX.utils.aoa_to_sheet(data);
 					worksheet["!merges"] = mergeInstructions;
 
-					worksheet["!cols"] = [
-						{ wch: 5 },   // No
-						{ wch: 20 },  // Tanggal
-						{ wch: 25 },  // Nama Pegawai
-						{ wch: 15 },  // Keterangan
-						{ wch: 30 },  // Alasan Tidak Hadir
+					worksheet["!cols"] = [{
+							wch: 5
+						}, // No
+						{
+							wch: 20
+						}, // Tanggal
+						{
+							wch: 25
+						}, // Nama Pegawai
+						{
+							wch: 15
+						}, // Keterangan
+						{
+							wch: 30
+						}, // Alasan Tidak Hadir
 					];
 
 
 					const range = XLSX.utils.decode_range(worksheet['!ref']);
 					for (let R = range.s.r; R <= range.e.r; ++R) {
 						for (let C = range.s.c; C <= range.e.c; ++C) {
-							const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+							const cell_address = XLSX.utils.encode_cell({
+								r: R,
+								c: C
+							});
 							const cell = worksheet[cell_address];
 							if (cell) {
 								cell.s = cell.s || {};
-								cell.s.alignment = { wrapText: true, vertical: "top" };
+								cell.s.alignment = {
+									wrapText: true,
+									vertical: "top"
+								};
 							}
 						}
 					}
@@ -4891,8 +7133,26 @@
 							const isNewGroup = currentNo !== lastNo || currentTanggal !== lastTanggal;
 
 							if (isNewGroup && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-								mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-								mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+								mergeInstructions.push({
+									s: {
+										r: spanStartIndex,
+										c: 0
+									},
+									e: {
+										r: currentRowIndex - 1,
+										c: 0
+									}
+								});
+								mergeInstructions.push({
+									s: {
+										r: spanStartIndex,
+										c: 1
+									},
+									e: {
+										r: currentRowIndex - 1,
+										c: 1
+									}
+								});
 							}
 
 							if (isNewGroup) {
@@ -4906,31 +7166,64 @@
 						currentRowIndex++;
 
 						if (idx === tableRows.length - 1 && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 0
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 0
+								}
+							});
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 1
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 1
+								}
+							});
 						}
 					});
 
 					const worksheet = XLSX.utils.aoa_to_sheet(data);
 					worksheet["!merges"] = mergeInstructions;
 
-					worksheet["!cols"] = [
-						{ wch: 5 },   // No
-						{ wch: 20 },  // Tanggal
-						{ wch: 25 },  // Nama Pegawai
-						{ wch: 15 },  // Keterangan
-						{ wch: 30 },  // Alasan Tidak Hadir
+					worksheet["!cols"] = [{
+							wch: 5
+						}, // No
+						{
+							wch: 20
+						}, // Tanggal
+						{
+							wch: 25
+						}, // Nama Pegawai
+						{
+							wch: 15
+						}, // Keterangan
+						{
+							wch: 30
+						}, // Alasan Tidak Hadir
 					];
 
 
 					const range = XLSX.utils.decode_range(worksheet['!ref']);
 					for (let R = range.s.r; R <= range.e.r; ++R) {
 						for (let C = range.s.c; C <= range.e.c; ++C) {
-							const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+							const cell_address = XLSX.utils.encode_cell({
+								r: R,
+								c: C
+							});
 							const cell = worksheet[cell_address];
 							if (cell) {
 								cell.s = cell.s || {};
-								cell.s.alignment = { wrapText: true, vertical: "top" };
+								cell.s.alignment = {
+									wrapText: true,
+									vertical: "top"
+								};
 							}
 						}
 					}
@@ -5003,8 +7296,26 @@
 							const isNewGroup = currentNo !== lastNo || currentTanggal !== lastTanggal;
 
 							if (isNewGroup && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-								mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-								mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+								mergeInstructions.push({
+									s: {
+										r: spanStartIndex,
+										c: 0
+									},
+									e: {
+										r: currentRowIndex - 1,
+										c: 0
+									}
+								});
+								mergeInstructions.push({
+									s: {
+										r: spanStartIndex,
+										c: 1
+									},
+									e: {
+										r: currentRowIndex - 1,
+										c: 1
+									}
+								});
 							}
 
 							if (isNewGroup) {
@@ -5018,33 +7329,70 @@
 						currentRowIndex++;
 
 						if (idx === tableRows.length - 1 && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 0
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 0
+								}
+							});
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 1
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 1
+								}
+							});
 						}
 					});
 
 					const worksheet = XLSX.utils.aoa_to_sheet(data);
 					worksheet["!merges"] = mergeInstructions;
 
-					worksheet["!cols"] = [
-						{ wch: 5 },   // No
-						{ wch: 20 },  // Tanggal
-						{ wch: 30 },  // Nama Pegawai
-						{ wch: 30 },  // Status
-						{ wch: 30 },  // Jam Terlambat
-						{ wch: 30 },  // Jam Terlambat
-						{ wch: 30 },  // Waktu
+					worksheet["!cols"] = [{
+							wch: 5
+						}, // No
+						{
+							wch: 20
+						}, // Tanggal
+						{
+							wch: 30
+						}, // Nama Pegawai
+						{
+							wch: 30
+						}, // Status
+						{
+							wch: 30
+						}, // Jam Terlambat
+						{
+							wch: 30
+						}, // Jam Terlambat
+						{
+							wch: 30
+						}, // Waktu
 					];
 
 
 					const range = XLSX.utils.decode_range(worksheet['!ref']);
 					for (let R = range.s.r; R <= range.e.r; ++R) {
 						for (let C = range.s.c; C <= range.e.c; ++C) {
-							const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+							const cell_address = XLSX.utils.encode_cell({
+								r: R,
+								c: C
+							});
 							const cell = worksheet[cell_address];
 							if (cell) {
 								cell.s = cell.s || {};
-								cell.s.alignment = { wrapText: true, vertical: "top" };
+								cell.s.alignment = {
+									wrapText: true,
+									vertical: "top"
+								};
 							}
 						}
 					}
@@ -5116,8 +7464,26 @@
 							const isNewGroup = currentNo !== lastNo || currentTanggal !== lastTanggal;
 
 							if (isNewGroup && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-								mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-								mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+								mergeInstructions.push({
+									s: {
+										r: spanStartIndex,
+										c: 0
+									},
+									e: {
+										r: currentRowIndex - 1,
+										c: 0
+									}
+								});
+								mergeInstructions.push({
+									s: {
+										r: spanStartIndex,
+										c: 1
+									},
+									e: {
+										r: currentRowIndex - 1,
+										c: 1
+									}
+								});
 							}
 
 							if (isNewGroup) {
@@ -5131,33 +7497,70 @@
 						currentRowIndex++;
 
 						if (idx === tableRows.length - 1 && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 0
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 0
+								}
+							});
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 1
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 1
+								}
+							});
 						}
 					});
 
 					const worksheet = XLSX.utils.aoa_to_sheet(data);
 					worksheet["!merges"] = mergeInstructions;
 
-					worksheet["!cols"] = [
-						{ wch: 5 },   // No
-						{ wch: 20 },  // Tanggal
-						{ wch: 30 },  // Nama Pegawai
-						{ wch: 30 },  // Status
-						{ wch: 30 },  // Jam Terlambat
-						{ wch: 30 },  // Waktu
-						{ wch: 30 },  // Waktu
+					worksheet["!cols"] = [{
+							wch: 5
+						}, // No
+						{
+							wch: 20
+						}, // Tanggal
+						{
+							wch: 30
+						}, // Nama Pegawai
+						{
+							wch: 30
+						}, // Status
+						{
+							wch: 30
+						}, // Jam Terlambat
+						{
+							wch: 30
+						}, // Waktu
+						{
+							wch: 30
+						}, // Waktu
 					];
 
 
 					const range = XLSX.utils.decode_range(worksheet['!ref']);
 					for (let R = range.s.r; R <= range.e.r; ++R) {
 						for (let C = range.s.c; C <= range.e.c; ++C) {
-							const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+							const cell_address = XLSX.utils.encode_cell({
+								r: R,
+								c: C
+							});
 							const cell = worksheet[cell_address];
 							if (cell) {
 								cell.s = cell.s || {};
-								cell.s.alignment = { wrapText: true, vertical: "top" };
+								cell.s.alignment = {
+									wrapText: true,
+									vertical: "top"
+								};
 							}
 						}
 					}
@@ -5225,8 +7628,26 @@
 							const isNewGroup = currentNo !== lastNo || currentTanggal !== lastTanggal;
 
 							if (isNewGroup && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-								mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-								mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+								mergeInstructions.push({
+									s: {
+										r: spanStartIndex,
+										c: 0
+									},
+									e: {
+										r: currentRowIndex - 1,
+										c: 0
+									}
+								});
+								mergeInstructions.push({
+									s: {
+										r: spanStartIndex,
+										c: 1
+									},
+									e: {
+										r: currentRowIndex - 1,
+										c: 1
+									}
+								});
 							}
 
 							if (isNewGroup) {
@@ -5240,33 +7661,70 @@
 						currentRowIndex++;
 
 						if (idx === tableRows.length - 1 && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 0
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 0
+								}
+							});
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 1
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 1
+								}
+							});
 						}
 					});
 
 					const worksheet = XLSX.utils.aoa_to_sheet(data);
 					worksheet["!merges"] = mergeInstructions;
 
-					worksheet["!cols"] = [
-						{ wch: 5 },   // No
-						{ wch: 20 },  // Tanggal
-						{ wch: 30 },  // Nama Pegawai
-						{ wch: 30 },  // Jam Masuk
-						{ wch: 30 },  // Jam Terlambat
-						{ wch: 30 },  // Status
-						{ wch: 30 },  // Status
+					worksheet["!cols"] = [{
+							wch: 5
+						}, // No
+						{
+							wch: 20
+						}, // Tanggal
+						{
+							wch: 30
+						}, // Nama Pegawai
+						{
+							wch: 30
+						}, // Jam Masuk
+						{
+							wch: 30
+						}, // Jam Terlambat
+						{
+							wch: 30
+						}, // Status
+						{
+							wch: 30
+						}, // Status
 					];
 
 
 					const range = XLSX.utils.decode_range(worksheet['!ref']);
 					for (let R = range.s.r; R <= range.e.r; ++R) {
 						for (let C = range.s.c; C <= range.e.c; ++C) {
-							const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+							const cell_address = XLSX.utils.encode_cell({
+								r: R,
+								c: C
+							});
 							const cell = worksheet[cell_address];
 							if (cell) {
 								cell.s = cell.s || {};
-								cell.s.alignment = { wrapText: true, vertical: "top" };
+								cell.s.alignment = {
+									wrapText: true,
+									vertical: "top"
+								};
 							}
 						}
 					}
@@ -5301,7 +7759,7 @@
 					data.push(["Laporan Rekap Keterlambatan Pegawai"]);
 					data.push([`Tanggal: ${formatTanggal(tanggal_dari)} s/d ${formatTanggal(tanggal_sampai)}`]);
 					data.push([]);
-					data.push(["No", "Tanggal", "Nama Pegawai", "Jabatan", "Jam Masuk", "Menit Terlambat", "Status",]);
+					data.push(["No", "Tanggal", "Nama Pegawai", "Jabatan", "Jam Masuk", "Menit Terlambat", "Status", ]);
 					const tableRows = document.querySelectorAll("#data_presensi_keterlambatan_pegawai tbody tr");
 
 					if (tableRows.length === 0) {
@@ -5336,8 +7794,26 @@
 							const isNewGroup = currentNo !== lastNo || currentTanggal !== lastTanggal;
 
 							if (isNewGroup && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-								mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-								mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+								mergeInstructions.push({
+									s: {
+										r: spanStartIndex,
+										c: 0
+									},
+									e: {
+										r: currentRowIndex - 1,
+										c: 0
+									}
+								});
+								mergeInstructions.push({
+									s: {
+										r: spanStartIndex,
+										c: 1
+									},
+									e: {
+										r: currentRowIndex - 1,
+										c: 1
+									}
+								});
 							}
 
 							if (isNewGroup) {
@@ -5351,33 +7827,70 @@
 						currentRowIndex++;
 
 						if (idx === tableRows.length - 1 && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 0
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 0
+								}
+							});
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 1
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 1
+								}
+							});
 						}
 					});
 
 					const worksheet = XLSX.utils.aoa_to_sheet(data);
 					worksheet["!merges"] = mergeInstructions;
 
-					worksheet["!cols"] = [
-						{ wch: 5 },   // No
-						{ wch: 20 },  // Tanggal
-						{ wch: 25 },  // Nama Pegawai
-						{ wch: 15 },  // Jabatan
-						{ wch: 30 },  // Status
-						{ wch: 30 },  //  Terlambat
-						{ wch: 30 },  // Waktu
+					worksheet["!cols"] = [{
+							wch: 5
+						}, // No
+						{
+							wch: 20
+						}, // Tanggal
+						{
+							wch: 25
+						}, // Nama Pegawai
+						{
+							wch: 15
+						}, // Jabatan
+						{
+							wch: 30
+						}, // Status
+						{
+							wch: 30
+						}, //  Terlambat
+						{
+							wch: 30
+						}, // Waktu
 					];
 
 
 					const range = XLSX.utils.decode_range(worksheet['!ref']);
 					for (let R = range.s.r; R <= range.e.r; ++R) {
 						for (let C = range.s.c; C <= range.e.c; ++C) {
-							const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+							const cell_address = XLSX.utils.encode_cell({
+								r: R,
+								c: C
+							});
 							const cell = worksheet[cell_address];
 							if (cell) {
 								cell.s = cell.s || {};
-								cell.s.alignment = { wrapText: true, vertical: "top" };
+								cell.s.alignment = {
+									wrapText: true,
+									vertical: "top"
+								};
 							}
 						}
 					}
@@ -5442,8 +7955,26 @@
 							const isNewGroup = currentNo !== lastNo || currentTanggal !== lastTanggal;
 
 							if (isNewGroup && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-								mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-								mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+								mergeInstructions.push({
+									s: {
+										r: spanStartIndex,
+										c: 0
+									},
+									e: {
+										r: currentRowIndex - 1,
+										c: 0
+									}
+								});
+								mergeInstructions.push({
+									s: {
+										r: spanStartIndex,
+										c: 1
+									},
+									e: {
+										r: currentRowIndex - 1,
+										c: 1
+									}
+								});
 							}
 
 							if (isNewGroup) {
@@ -5457,33 +7988,70 @@
 						currentRowIndex++;
 
 						if (idx === tableRows.length - 1 && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 0
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 0
+								}
+							});
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 1
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 1
+								}
+							});
 						}
 					});
 
 					const worksheet = XLSX.utils.aoa_to_sheet(data);
 					worksheet["!merges"] = mergeInstructions;
 
-					worksheet["!cols"] = [
-						{ wch: 5 },   // No
-						{ wch: 20 },  // Tanggal
-						{ wch: 25 },  // Nama Pegawai
-						{ wch: 15 },  // Jabatan
-						{ wch: 30 },  // Status
-						{ wch: 30 },  // Jam Terlambat
-						{ wch: 30 },  // Waktu
+					worksheet["!cols"] = [{
+							wch: 5
+						}, // No
+						{
+							wch: 20
+						}, // Tanggal
+						{
+							wch: 25
+						}, // Nama Pegawai
+						{
+							wch: 15
+						}, // Jabatan
+						{
+							wch: 30
+						}, // Status
+						{
+							wch: 30
+						}, // Jam Terlambat
+						{
+							wch: 30
+						}, // Waktu
 					];
 
 
 					const range = XLSX.utils.decode_range(worksheet['!ref']);
 					for (let R = range.s.r; R <= range.e.r; ++R) {
 						for (let C = range.s.c; C <= range.e.c; ++C) {
-							const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+							const cell_address = XLSX.utils.encode_cell({
+								r: R,
+								c: C
+							});
 							const cell = worksheet[cell_address];
 							if (cell) {
 								cell.s = cell.s || {};
-								cell.s.alignment = { wrapText: true, vertical: "top" };
+								cell.s.alignment = {
+									wrapText: true,
+									vertical: "top"
+								};
 							}
 						}
 					}
@@ -5542,8 +8110,26 @@
 							const isNewGroup = currentNo !== lastNo || currentTanggal !== lastTanggal;
 
 							if (isNewGroup && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-								mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-								mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+								mergeInstructions.push({
+									s: {
+										r: spanStartIndex,
+										c: 0
+									},
+									e: {
+										r: currentRowIndex - 1,
+										c: 0
+									}
+								});
+								mergeInstructions.push({
+									s: {
+										r: spanStartIndex,
+										c: 1
+									},
+									e: {
+										r: currentRowIndex - 1,
+										c: 1
+									}
+								});
 							}
 
 							if (isNewGroup) {
@@ -5557,33 +8143,70 @@
 						currentRowIndex++;
 
 						if (idx === tableRows.length - 1 && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 0
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 0
+								}
+							});
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 1
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 1
+								}
+							});
 						}
 					});
 
 					const worksheet = XLSX.utils.aoa_to_sheet(data);
 					worksheet["!merges"] = mergeInstructions;
 
-					worksheet["!cols"] = [
-						{ wch: 5 },   // No
-						{ wch: 20 },  // Tanggal
-						{ wch: 25 },  // Nama Pegawai
-						{ wch: 15 },  // Jabatan
-						{ wch: 30 },  // Status
-						{ wch: 30 },  // Jam Terlambat
-						{ wch: 30 },  // Waktu
+					worksheet["!cols"] = [{
+							wch: 5
+						}, // No
+						{
+							wch: 20
+						}, // Tanggal
+						{
+							wch: 25
+						}, // Nama Pegawai
+						{
+							wch: 15
+						}, // Jabatan
+						{
+							wch: 30
+						}, // Status
+						{
+							wch: 30
+						}, // Jam Terlambat
+						{
+							wch: 30
+						}, // Waktu
 					];
 
 
 					const range = XLSX.utils.decode_range(worksheet['!ref']);
 					for (let R = range.s.r; R <= range.e.r; ++R) {
 						for (let C = range.s.c; C <= range.e.c; ++C) {
-							const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+							const cell_address = XLSX.utils.encode_cell({
+								r: R,
+								c: C
+							});
 							const cell = worksheet[cell_address];
 							if (cell) {
 								cell.s = cell.s || {};
-								cell.s.alignment = { wrapText: true, vertical: "top" };
+								cell.s.alignment = {
+									wrapText: true,
+									vertical: "top"
+								};
 							}
 						}
 					}
@@ -5663,8 +8286,26 @@
 							const isNewGroup = currentNo !== lastNo || currentTanggal !== lastTanggal;
 
 							if (isNewGroup && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-								mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-								mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+								mergeInstructions.push({
+									s: {
+										r: spanStartIndex,
+										c: 0
+									},
+									e: {
+										r: currentRowIndex - 1,
+										c: 0
+									}
+								});
+								mergeInstructions.push({
+									s: {
+										r: spanStartIndex,
+										c: 1
+									},
+									e: {
+										r: currentRowIndex - 1,
+										c: 1
+									}
+								});
 							}
 
 							if (isNewGroup) {
@@ -5678,34 +8319,69 @@
 						currentRowIndex++;
 
 						if (idx === tableRows.length - 1 && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 0
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 0
+								}
+							});
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 1
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 1
+								}
+							});
 						}
 					});
 
 					const worksheet = XLSX.utils.aoa_to_sheet(data);
 					worksheet["!merges"] = mergeInstructions;
 
-					worksheet["!cols"] = [
-						{ wch: 5 },   // No
-						{ wch: 20 },  // Tanggal
+					worksheet["!cols"] = [{
+							wch: 5
+						}, // No
+						{
+							wch: 20
+						}, // Tanggal
 						// { wch: 25 },  // Nama Pegawai
 						// { wch: 15 },  // Jabatan
-						{ wch: 30 },  // Status
-						{ wch: 30 },  // Jam Terlambat
-						{ wch: 30 },  // Waktu
-						{ wch: 30 },  // Jam Pulang
+						{
+							wch: 30
+						}, // Status
+						{
+							wch: 30
+						}, // Jam Terlambat
+						{
+							wch: 30
+						}, // Waktu
+						{
+							wch: 30
+						}, // Jam Pulang
 					];
 
 
 					const range = XLSX.utils.decode_range(worksheet['!ref']);
 					for (let R = range.s.r; R <= range.e.r; ++R) {
 						for (let C = range.s.c; C <= range.e.c; ++C) {
-							const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+							const cell_address = XLSX.utils.encode_cell({
+								r: R,
+								c: C
+							});
 							const cell = worksheet[cell_address];
 							if (cell) {
 								cell.s = cell.s || {};
-								cell.s.alignment = { wrapText: true, vertical: "top" };
+								cell.s.alignment = {
+									wrapText: true,
+									vertical: "top"
+								};
 							}
 						}
 					}
@@ -5783,8 +8459,26 @@
 							const isNewGroup = currentNo !== lastNo || currentTanggal !== lastTanggal;
 
 							if (isNewGroup && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-								mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-								mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+								mergeInstructions.push({
+									s: {
+										r: spanStartIndex,
+										c: 0
+									},
+									e: {
+										r: currentRowIndex - 1,
+										c: 0
+									}
+								});
+								mergeInstructions.push({
+									s: {
+										r: spanStartIndex,
+										c: 1
+									},
+									e: {
+										r: currentRowIndex - 1,
+										c: 1
+									}
+								});
 							}
 
 							if (isNewGroup) {
@@ -5798,34 +8492,69 @@
 						currentRowIndex++;
 
 						if (idx === tableRows.length - 1 && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 0
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 0
+								}
+							});
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 1
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 1
+								}
+							});
 						}
 					});
 
 					const worksheet = XLSX.utils.aoa_to_sheet(data);
 					worksheet["!merges"] = mergeInstructions;
 
-					worksheet["!cols"] = [
-						{ wch: 5 },   // No
-						{ wch: 20 },  // Tanggal
+					worksheet["!cols"] = [{
+							wch: 5
+						}, // No
+						{
+							wch: 20
+						}, // Tanggal
 						// { wch: 25 },  // Nama Pegawai
 						// { wch: 15 },  // Jabatan
-						{ wch: 30 },  // Status
-						{ wch: 30 },  // Jam Terlambat
-						{ wch: 30 },  // Waktu
-						{ wch: 30 },  // Jam Pulang
+						{
+							wch: 30
+						}, // Status
+						{
+							wch: 30
+						}, // Jam Terlambat
+						{
+							wch: 30
+						}, // Waktu
+						{
+							wch: 30
+						}, // Jam Pulang
 					];
 
 
 					const range = XLSX.utils.decode_range(worksheet['!ref']);
 					for (let R = range.s.r; R <= range.e.r; ++R) {
 						for (let C = range.s.c; C <= range.e.c; ++C) {
-							const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+							const cell_address = XLSX.utils.encode_cell({
+								r: R,
+								c: C
+							});
 							const cell = worksheet[cell_address];
 							if (cell) {
 								cell.s = cell.s || {};
-								cell.s.alignment = { wrapText: true, vertical: "top" };
+								cell.s.alignment = {
+									wrapText: true,
+									vertical: "top"
+								};
 							}
 						}
 					}
@@ -5895,8 +8624,26 @@
 							const isNewGroup = currentNo !== lastNo || currentTanggal !== lastTanggal;
 
 							if (isNewGroup && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-								mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-								mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+								mergeInstructions.push({
+									s: {
+										r: spanStartIndex,
+										c: 0
+									},
+									e: {
+										r: currentRowIndex - 1,
+										c: 0
+									}
+								});
+								mergeInstructions.push({
+									s: {
+										r: spanStartIndex,
+										c: 1
+									},
+									e: {
+										r: currentRowIndex - 1,
+										c: 1
+									}
+								});
 							}
 
 							if (isNewGroup) {
@@ -5910,34 +8657,69 @@
 						currentRowIndex++;
 
 						if (idx === tableRows.length - 1 && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 0
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 0
+								}
+							});
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 1
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 1
+								}
+							});
 						}
 					});
 
 					const worksheet = XLSX.utils.aoa_to_sheet(data);
 					worksheet["!merges"] = mergeInstructions;
 
-					worksheet["!cols"] = [
-						{ wch: 5 },   // No
-						{ wch: 20 },  // Tanggal
+					worksheet["!cols"] = [{
+							wch: 5
+						}, // No
+						{
+							wch: 20
+						}, // Tanggal
 						// { wch: 25 },  // Nama Pegawai
 						// { wch: 15 },  // Jabatan
-						{ wch: 30 },  // Status
-						{ wch: 30 },  // Jam Terlambat
-						{ wch: 30 },  // Waktu
-						{ wch: 30 },  // Jam Pulang
+						{
+							wch: 30
+						}, // Status
+						{
+							wch: 30
+						}, // Jam Terlambat
+						{
+							wch: 30
+						}, // Waktu
+						{
+							wch: 30
+						}, // Jam Pulang
 					];
 
 
 					const range = XLSX.utils.decode_range(worksheet['!ref']);
 					for (let R = range.s.r; R <= range.e.r; ++R) {
 						for (let C = range.s.c; C <= range.e.c; ++C) {
-							const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+							const cell_address = XLSX.utils.encode_cell({
+								r: R,
+								c: C
+							});
 							const cell = worksheet[cell_address];
 							if (cell) {
 								cell.s = cell.s || {};
-								cell.s.alignment = { wrapText: true, vertical: "top" };
+								cell.s.alignment = {
+									wrapText: true,
+									vertical: "top"
+								};
 							}
 						}
 					}
@@ -6011,6 +8793,7 @@
 				let total_potongan_pinjaman = 0;
 				let total_pengeluaran = 0;
 				let total_sisa = 0;
+
 				function toNumber(value) {
 
 					if (value === '' || value == null) {
@@ -6019,6 +8802,7 @@
 
 					return Number(value.toString().replace(/\./g, '').replace(/,/g, '').trim()) || 0;
 				}
+
 				function excelValue(val) {
 					let num = toNumber(val);
 					return num === 0 ? 0 : num;
@@ -6050,8 +8834,26 @@
 						const isNewGroup = currentNo !== lastNo || currentTanggal !== lastTanggal;
 
 						if (isNewGroup && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 0
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 0
+								}
+							});
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 1
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 1
+								}
+							});
 						}
 
 						if (isNewGroup) {
@@ -6088,8 +8890,26 @@
 					currentRowIndex++;
 
 					if (idx === tableRows.length - 1 && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-						mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-						mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
+						mergeInstructions.push({
+							s: {
+								r: spanStartIndex,
+								c: 0
+							},
+							e: {
+								r: currentRowIndex - 1,
+								c: 0
+							}
+						});
+						mergeInstructions.push({
+							s: {
+								r: spanStartIndex,
+								c: 1
+							},
+							e: {
+								r: currentRowIndex - 1,
+								c: 1
+							}
+						});
 					}
 				});
 				let totalRow = [
@@ -6133,23 +8953,34 @@
 				}
 				worksheet["!merges"] = mergeInstructions;
 
-				let cols = [
-					{ wch: 5 },   // No
-					{ wch: 35 }   // Nama Pegawai
+				let cols = [{
+						wch: 5
+					}, // No
+					{
+						wch: 35
+					} // Nama Pegawai
 				];
 
 				for (let i = 2; i <= range.e.c; i++) {
-					cols.push({ wch: 20 });
+					cols.push({
+						wch: 20
+					});
 				}
 				worksheet["!cols"] = cols;
 
 				for (let R = range.s.r; R <= range.e.r; ++R) {
 					for (let C = range.s.c; C <= range.e.c; ++C) {
-						const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+						const cell_address = XLSX.utils.encode_cell({
+							r: R,
+							c: C
+						});
 						const cell = worksheet[cell_address];
 						if (cell) {
 							cell.s = cell.s || {};
-							cell.s.alignment = { wrapText: true, vertical: "top" };
+							cell.s.alignment = {
+								wrapText: true,
+								vertical: "top"
+							};
 						}
 					}
 				}
@@ -6191,7 +9022,9 @@
 					}
 
 					function toNumber(value) {
-						if (value === '' || value == null) { return ''; }
+						if (value === '' || value == null) {
+							return '';
+						}
 						return Number(value.toString().replace(/\./g, '').replace(/,/g, '').trim()) || '';
 					}
 
@@ -6207,7 +9040,8 @@
 								cells[0],
 								toNumber(cells[1]),
 								cells[2],
-								toNumber(cells[3])]);
+								toNumber(cells[3])
+							]);
 						}
 
 						// saldo bulan ini (colspan=3)
@@ -6255,9 +9089,7 @@
 					const worksheet = XLSX.utils.aoa_to_sheet(data);
 					let excelRange = XLSX.utils.decode_range(worksheet['!ref']);
 					for (
-						let R = 0;
-						R <= excelRange.e.r;
-						R++
+						let R = 0; R <= excelRange.e.r; R++
 					) {
 						[1, 3].forEach(C => {
 							let addr = XLSX.utils.encode_cell({
@@ -6270,22 +9102,35 @@
 						});
 					}
 
-					worksheet["!cols"] = [
-						{ wch: 35 },
-						{ wch: 20 },
-						{ wch: 35 },
-						{ wch: 20 },
+					worksheet["!cols"] = [{
+							wch: 35
+						},
+						{
+							wch: 20
+						},
+						{
+							wch: 35
+						},
+						{
+							wch: 20
+						},
 					];
 
 
 					const range = XLSX.utils.decode_range(worksheet['!ref']);
 					for (let R = range.s.r; R <= range.e.r; ++R) {
 						for (let C = range.s.c; C <= range.e.c; ++C) {
-							const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+							const cell_address = XLSX.utils.encode_cell({
+								r: R,
+								c: C
+							});
 							const cell = worksheet[cell_address];
 							if (cell) {
 								cell.s = cell.s || {};
-								cell.s.alignment = { wrapText: true, vertical: "top" };
+								cell.s.alignment = {
+									wrapText: true,
+									vertical: "top"
+								};
 							}
 						}
 					}
@@ -6293,43 +9138,85 @@
 					worksheet['!merges'] = [
 						// judul laporan
 						{
-							s: { r: 0, c: 0 },
-							e: { r: 0, c: 3 }
+							s: {
+								r: 0,
+								c: 0
+							},
+							e: {
+								r: 0,
+								c: 3
+							}
 						},
 
 						// nama sekolah
 						{
-							s: { r: 1, c: 0 },
-							e: { r: 1, c: 3 }
+							s: {
+								r: 1,
+								c: 0
+							},
+							e: {
+								r: 1,
+								c: 3
+							}
 						},
 						// tanggal
 						{
-							s: { r: startTtdRow + 2, c: 2 },
-							e: { r: startTtdRow + 2, c: 3 }
+							s: {
+								r: startTtdRow + 2,
+								c: 2
+							},
+							e: {
+								r: startTtdRow + 2,
+								c: 3
+							}
 						},
 
 						// ketua
 						{
-							s: { r: startTtdRow + 3, c: 0 },
-							e: { r: startTtdRow + 3, c: 1 }
+							s: {
+								r: startTtdRow + 3,
+								c: 0
+							},
+							e: {
+								r: startTtdRow + 3,
+								c: 1
+							}
 						},
 
 						// bendahara
 						{
-							s: { r: startTtdRow + 3, c: 2 },
-							e: { r: startTtdRow + 3, c: 3 }
+							s: {
+								r: startTtdRow + 3,
+								c: 2
+							},
+							e: {
+								r: startTtdRow + 3,
+								c: 3
+							}
 						},
 
 						// nama ketua
 						{
-							s: { r: startTtdRow + 8, c: 0 },
-							e: { r: startTtdRow + 8, c: 1 }
+							s: {
+								r: startTtdRow + 8,
+								c: 0
+							},
+							e: {
+								r: startTtdRow + 8,
+								c: 1
+							}
 						},
 
 						// nama bendahara
 						{
-							s: { r: startTtdRow + 8, c: 2 },
-							e: { r: startTtdRow + 8, c: 3 }
+							s: {
+								r: startTtdRow + 8,
+								c: 2
+							},
+							e: {
+								r: startTtdRow + 8,
+								c: 3
+							}
 						},
 
 					];
@@ -6406,7 +9293,9 @@
 					}
 
 					function toNumber(value) {
-						if (value === '' || value == null) { return ''; }
+						if (value === '' || value == null) {
+							return '';
+						}
 						return Number(value.toString().replace(/\./g, '').replace(/,/g, '').trim()) || '';
 					}
 
@@ -6422,7 +9311,8 @@
 								cells[0],
 								toNumber(cells[1]),
 								cells[2],
-								toNumber(cells[3])]);
+								toNumber(cells[3])
+							]);
 						}
 
 						// saldo bulan ini (colspan=3)
@@ -6470,9 +9360,7 @@
 					const worksheet = XLSX.utils.aoa_to_sheet(data);
 					let excelRange = XLSX.utils.decode_range(worksheet['!ref']);
 					for (
-						let R = 0;
-						R <= excelRange.e.r;
-						R++
+						let R = 0; R <= excelRange.e.r; R++
 					) {
 						[1, 3].forEach(C => {
 							let addr = XLSX.utils.encode_cell({
@@ -6485,22 +9373,35 @@
 						});
 					}
 
-					worksheet["!cols"] = [
-						{ wch: 35 },
-						{ wch: 20 },
-						{ wch: 35 },
-						{ wch: 20 },
+					worksheet["!cols"] = [{
+							wch: 35
+						},
+						{
+							wch: 20
+						},
+						{
+							wch: 35
+						},
+						{
+							wch: 20
+						},
 					];
 
 
 					const range = XLSX.utils.decode_range(worksheet['!ref']);
 					for (let R = range.s.r; R <= range.e.r; ++R) {
 						for (let C = range.s.c; C <= range.e.c; ++C) {
-							const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+							const cell_address = XLSX.utils.encode_cell({
+								r: R,
+								c: C
+							});
 							const cell = worksheet[cell_address];
 							if (cell) {
 								cell.s = cell.s || {};
-								cell.s.alignment = { wrapText: true, vertical: "top" };
+								cell.s.alignment = {
+									wrapText: true,
+									vertical: "top"
+								};
 							}
 						}
 					}
@@ -6508,43 +9409,85 @@
 					worksheet['!merges'] = [
 						// judul laporan
 						{
-							s: { r: 0, c: 0 },
-							e: { r: 0, c: 3 }
+							s: {
+								r: 0,
+								c: 0
+							},
+							e: {
+								r: 0,
+								c: 3
+							}
 						},
 
 						// nama sekolah
 						{
-							s: { r: 1, c: 0 },
-							e: { r: 1, c: 3 }
+							s: {
+								r: 1,
+								c: 0
+							},
+							e: {
+								r: 1,
+								c: 3
+							}
 						},
 						// tanggal
 						{
-							s: { r: startTtdRow + 2, c: 2 },
-							e: { r: startTtdRow + 2, c: 3 }
+							s: {
+								r: startTtdRow + 2,
+								c: 2
+							},
+							e: {
+								r: startTtdRow + 2,
+								c: 3
+							}
 						},
 
 						// ketua
 						{
-							s: { r: startTtdRow + 3, c: 0 },
-							e: { r: startTtdRow + 3, c: 1 }
+							s: {
+								r: startTtdRow + 3,
+								c: 0
+							},
+							e: {
+								r: startTtdRow + 3,
+								c: 1
+							}
 						},
 
 						// bendahara
 						{
-							s: { r: startTtdRow + 3, c: 2 },
-							e: { r: startTtdRow + 3, c: 3 }
+							s: {
+								r: startTtdRow + 3,
+								c: 2
+							},
+							e: {
+								r: startTtdRow + 3,
+								c: 3
+							}
 						},
 
 						// nama ketua
 						{
-							s: { r: startTtdRow + 8, c: 0 },
-							e: { r: startTtdRow + 8, c: 1 }
+							s: {
+								r: startTtdRow + 8,
+								c: 0
+							},
+							e: {
+								r: startTtdRow + 8,
+								c: 1
+							}
 						},
 
 						// nama bendahara
 						{
-							s: { r: startTtdRow + 8, c: 2 },
-							e: { r: startTtdRow + 8, c: 3 }
+							s: {
+								r: startTtdRow + 8,
+								c: 2
+							},
+							e: {
+								r: startTtdRow + 8,
+								c: 3
+							}
 						},
 
 					];
@@ -6572,7 +9515,9 @@
 					].forEach(cell => {
 						if (worksheet[cell]) {
 							worksheet[cell].s = {
-								alignment: { horizontal: "center" }
+								alignment: {
+									horizontal: "center"
+								}
 							};
 						}
 					});
@@ -6602,7 +9547,9 @@
 					}
 
 					function toNumber(value) {
-						if (value === '' || value == null) { return ''; }
+						if (value === '' || value == null) {
+							return '';
+						}
 						return Number(value.toString().replace(/\./g, '').replace(/,/g, '').trim()) || '';
 					}
 
@@ -6622,8 +9569,14 @@
 							let colspan = parseInt(cell.getAttribute('colspan')) || 1;
 							if (colspan > 1) {
 								merges.push({
-									s: { r: rowIndex + 4, c: colIndex },
-									e: { r: rowIndex + 4, c: colIndex + colspan - 1 }
+									s: {
+										r: rowIndex + 4,
+										c: colIndex
+									},
+									e: {
+										r: rowIndex + 4,
+										c: colIndex + colspan - 1
+									}
 								});
 								for (let i = 1; i < colspan; i++) {
 									rowData.push('');
@@ -6689,32 +9642,65 @@
 						}
 					}
 
-					worksheet["!cols"] = [
-						{ wch: 20 }, // Tahun Mulai
-						{ wch: 30 }, // Bulan Aktif
-						{ wch: 15 },
-						{ wch: 15 },
-						{ wch: 15 },
-						{ wch: 15 },
-						{ wch: 15 },
-						{ wch: 15 },
-						{ wch: 15 },
-						{ wch: 15 },
-						{ wch: 15 },
-						{ wch: 15 },
-						{ wch: 15 },
-						{ wch: 15 }
+					worksheet["!cols"] = [{
+							wch: 20
+						}, // Tahun Mulai
+						{
+							wch: 30
+						}, // Bulan Aktif
+						{
+							wch: 15
+						},
+						{
+							wch: 15
+						},
+						{
+							wch: 15
+						},
+						{
+							wch: 15
+						},
+						{
+							wch: 15
+						},
+						{
+							wch: 15
+						},
+						{
+							wch: 15
+						},
+						{
+							wch: 15
+						},
+						{
+							wch: 15
+						},
+						{
+							wch: 15
+						},
+						{
+							wch: 15
+						},
+						{
+							wch: 15
+						}
 					];
 
 
 					const range = XLSX.utils.decode_range(worksheet['!ref']);
 					for (let R = range.s.r; R <= range.e.r; ++R) {
 						for (let C = range.s.c; C <= range.e.c; ++C) {
-							const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+							const cell_address = XLSX.utils.encode_cell({
+								r: R,
+								c: C
+							});
 							const cell = worksheet[cell_address];
 							if (cell) {
 								cell.s = cell.s || {};
-								cell.s.alignment = { wrapText: true, vertical: "top" };
+								cell.s.alignment = {
+									wrapText: true,
+									vertical: "top"
+								};
 							}
 						}
 					}
@@ -6722,32 +9708,62 @@
 					worksheet['!merges'] = [
 						...merges,
 						{
-							s: { r: startTtdRow + 2, c: 8 },
-							e: { r: startTtdRow + 2, c: 10 }
+							s: {
+								r: startTtdRow + 2,
+								c: 8
+							},
+							e: {
+								r: startTtdRow + 2,
+								c: 10
+							}
 						},
 
 						// Ketua
 						{
-							s: { r: startTtdRow + 3, c: 3 },
-							e: { r: startTtdRow + 3, c: 5 }
+							s: {
+								r: startTtdRow + 3,
+								c: 3
+							},
+							e: {
+								r: startTtdRow + 3,
+								c: 5
+							}
 						},
 
 						// Bendahara
 						{
-							s: { r: startTtdRow + 3, c: 8 },
-							e: { r: startTtdRow + 3, c: 10 }
+							s: {
+								r: startTtdRow + 3,
+								c: 8
+							},
+							e: {
+								r: startTtdRow + 3,
+								c: 10
+							}
 						},
 
 						// Nama Ketua
 						{
-							s: { r: startTtdRow + 8, c: 3 },
-							e: { r: startTtdRow + 8, c: 5 }
+							s: {
+								r: startTtdRow + 8,
+								c: 3
+							},
+							e: {
+								r: startTtdRow + 8,
+								c: 5
+							}
 						},
 
 						// Nama Bendahara
 						{
-							s: { r: startTtdRow + 8, c: 8 },
-							e: { r: startTtdRow + 8, c: 10 }
+							s: {
+								r: startTtdRow + 8,
+								c: 8
+							},
+							e: {
+								r: startTtdRow + 8,
+								c: 10
+							}
 						}
 					];
 
@@ -6755,7 +9771,9 @@
 					['A1', 'A2', 'A4'].forEach(cell => {
 						if (worksheet[cell]) {
 							worksheet[cell].s = {
-								font: { bold: true },
+								font: {
+									bold: true
+								},
 								alignment: {
 									horizontal: "center",
 									vertical: "center"
@@ -6772,7 +9790,9 @@
 					].forEach(cell => {
 						if (worksheet[cell]) {
 							worksheet[cell].s = {
-								alignment: { horizontal: "center" }
+								alignment: {
+									horizontal: "center"
+								}
 							};
 						}
 					});
@@ -6804,6 +9824,7 @@
 					alert("Tidak ada data untuk diekspor.");
 					return;
 				}
+
 				function toNumber(value) {
 					if (value == '' || value == null) {
 						return '';
@@ -6887,11 +9908,18 @@
 						}
 					});
 				}
-				worksheet["!cols"] = [
-					{ wch: 35 },
-					{ wch: 20 },
-					{ wch: 35 },
-					{ wch: 20 }
+				worksheet["!cols"] = [{
+						wch: 35
+					},
+					{
+						wch: 20
+					},
+					{
+						wch: 35
+					},
+					{
+						wch: 20
+					}
 				];
 				const range = XLSX.utils.decode_range(worksheet['!ref']);
 				for (let R = range.s.r; R <= range.e.r; ++R) {
@@ -6916,32 +9944,62 @@
 
 					// tanggal
 					{
-						s: { r: startTtdRow + 2, c: 2 },
-						e: { r: startTtdRow + 2, c: 3 }
+						s: {
+							r: startTtdRow + 2,
+							c: 2
+						},
+						e: {
+							r: startTtdRow + 2,
+							c: 3
+						}
 					},
 
 					// ketua
 					{
-						s: { r: startTtdRow + 3, c: 0 },
-						e: { r: startTtdRow + 3, c: 1 }
+						s: {
+							r: startTtdRow + 3,
+							c: 0
+						},
+						e: {
+							r: startTtdRow + 3,
+							c: 1
+						}
 					},
 
 					// bendahara
 					{
-						s: { r: startTtdRow + 3, c: 2 },
-						e: { r: startTtdRow + 3, c: 3 }
+						s: {
+							r: startTtdRow + 3,
+							c: 2
+						},
+						e: {
+							r: startTtdRow + 3,
+							c: 3
+						}
 					},
 
 					// nama ketua
 					{
-						s: { r: startTtdRow + 8, c: 0 },
-						e: { r: startTtdRow + 8, c: 1 }
+						s: {
+							r: startTtdRow + 8,
+							c: 0
+						},
+						e: {
+							r: startTtdRow + 8,
+							c: 1
+						}
 					},
 
 					// nama bendahara
 					{
-						s: { r: startTtdRow + 8, c: 2 },
-						e: { r: startTtdRow + 8, c: 3 }
+						s: {
+							r: startTtdRow + 8,
+							c: 2
+						},
+						e: {
+							r: startTtdRow + 8,
+							c: 3
+						}
 					},
 				];
 
@@ -6999,6 +10057,7 @@
 					alert("Tidak ada data untuk diekspor.");
 					return;
 				}
+
 				function toNumber(value) {
 					if (value == '' || value == null) {
 						return '';
@@ -7071,11 +10130,18 @@
 						}
 					});
 				}
-				worksheet["!cols"] = [
-					{ wch: 35 },
-					{ wch: 20 },
-					{ wch: 35 },
-					{ wch: 20 }
+				worksheet["!cols"] = [{
+						wch: 35
+					},
+					{
+						wch: 20
+					},
+					{
+						wch: 35
+					},
+					{
+						wch: 20
+					}
 				];
 				const range = XLSX.utils.decode_range(worksheet['!ref']);
 				for (let R = range.s.r; R <= range.e.r; ++R) {
@@ -7099,32 +10165,62 @@
 
 					// tanggal
 					{
-						s: { r: startTtdRow + 2, c: 2 },
-						e: { r: startTtdRow + 2, c: 3 }
+						s: {
+							r: startTtdRow + 2,
+							c: 2
+						},
+						e: {
+							r: startTtdRow + 2,
+							c: 3
+						}
 					},
 
 					// ketua
 					{
-						s: { r: startTtdRow + 3, c: 0 },
-						e: { r: startTtdRow + 3, c: 1 }
+						s: {
+							r: startTtdRow + 3,
+							c: 0
+						},
+						e: {
+							r: startTtdRow + 3,
+							c: 1
+						}
 					},
 
 					// bendahara
 					{
-						s: { r: startTtdRow + 3, c: 2 },
-						e: { r: startTtdRow + 3, c: 3 }
+						s: {
+							r: startTtdRow + 3,
+							c: 2
+						},
+						e: {
+							r: startTtdRow + 3,
+							c: 3
+						}
 					},
 
 					// nama ketua
 					{
-						s: { r: startTtdRow + 8, c: 0 },
-						e: { r: startTtdRow + 8, c: 1 }
+						s: {
+							r: startTtdRow + 8,
+							c: 0
+						},
+						e: {
+							r: startTtdRow + 8,
+							c: 1
+						}
 					},
 
 					// nama bendahara
 					{
-						s: { r: startTtdRow + 8, c: 2 },
-						e: { r: startTtdRow + 8, c: 3 }
+						s: {
+							r: startTtdRow + 8,
+							c: 2
+						},
+						e: {
+							r: startTtdRow + 8,
+							c: 3
+						}
 					},
 				];
 
@@ -7182,12 +10278,14 @@
 					alert("Tidak ada data untuk diekspor.");
 					return;
 				}
+
 				function toNumber(value) {
 					if (value == '' || value == null) {
 						return '';
 					}
 					return Number(value.toString().replace(/\./g, '').replace(/,/g, '').trim()) || '';
 				}
+
 				function toNumberSaldo(value) {
 					if (value == null || value.toString().trim() === '') {
 						return 0;
@@ -7286,12 +10384,21 @@
 						}
 					});
 				}
-				worksheet["!cols"] = [
-					{ wch: 25 },
-					{ wch: 15 },
-					{ wch: 15 },
-					{ wch: 15 },
-					{ wch: 15 }
+				worksheet["!cols"] = [{
+						wch: 25
+					},
+					{
+						wch: 15
+					},
+					{
+						wch: 15
+					},
+					{
+						wch: 15
+					},
+					{
+						wch: 15
+					}
 				];
 				const range = XLSX.utils.decode_range(worksheet['!ref']);
 				for (let R = range.s.r; R <= range.e.r; ++R) {
@@ -7315,32 +10422,62 @@
 
 					// tanggal
 					{
-						s: { r: startTtdRow + 2, c: 2 },
-						e: { r: startTtdRow + 2, c: 3 }
+						s: {
+							r: startTtdRow + 2,
+							c: 2
+						},
+						e: {
+							r: startTtdRow + 2,
+							c: 3
+						}
 					},
 
 					// ketua
 					{
-						s: { r: startTtdRow + 3, c: 0 },
-						e: { r: startTtdRow + 3, c: 1 }
+						s: {
+							r: startTtdRow + 3,
+							c: 0
+						},
+						e: {
+							r: startTtdRow + 3,
+							c: 1
+						}
 					},
 
 					// bendahara
 					{
-						s: { r: startTtdRow + 3, c: 2 },
-						e: { r: startTtdRow + 3, c: 3 }
+						s: {
+							r: startTtdRow + 3,
+							c: 2
+						},
+						e: {
+							r: startTtdRow + 3,
+							c: 3
+						}
 					},
 
 					// nama ketua
 					{
-						s: { r: startTtdRow + 8, c: 0 },
-						e: { r: startTtdRow + 8, c: 1 }
+						s: {
+							r: startTtdRow + 8,
+							c: 0
+						},
+						e: {
+							r: startTtdRow + 8,
+							c: 1
+						}
 					},
 
 					// nama bendahara
 					{
-						s: { r: startTtdRow + 8, c: 2 },
-						e: { r: startTtdRow + 8, c: 3 }
+						s: {
+							r: startTtdRow + 8,
+							c: 2
+						},
+						e: {
+							r: startTtdRow + 8,
+							c: 3
+						}
 					},
 
 					// mengetahui
@@ -7481,7 +10618,9 @@
 				}
 				worksheet["!cols"] =
 					header.map((h, i) => {
-						return { wch: i == 0 ? 30 : 20 }
+						return {
+							wch: i == 0 ? 30 : 20
+						}
 					});
 				const range = XLSX.utils.decode_range(worksheet['!ref']);
 				for (let R = range.s.r; R <= range.e.r; ++R) {
@@ -7502,7 +10641,7 @@
 				}
 				const workbook = XLSX.utils.book_new();
 				XLSX.utils.book_append_sheet(workbook, worksheet, "Rencana Asumsi Pemasukan");
-				XLSX.writeFile(workbook, `laporan_rencana_asumsi_pemasukan_tahun_ajaran_${tahun_ajaran_asumsi}.xlsx`);
+				XLSX.writeFile(workbook, `laporan_rencana_asumsi_pemasukan_tahun_ajaran_${spp_nama_tahun_ajaran_file(tahun_ajaran_asumsi)}.xlsx`);
 
 				$('#btn_print_laporan_excel').attr('disabled', false);
 				$('#btn_print_laporan_excel').html('<i class="fa fa-file-excel me-1"></i> Excel');
@@ -7528,6 +10667,7 @@
 					alert("Tidak ada data untuk diekspor.");
 					return;
 				}
+
 				function toNumber(value) {
 
 					if (
@@ -7540,10 +10680,10 @@
 
 					return Number(
 						value
-							.toString()
-							.replace(/\./g, '')
-							.replace(/,/g, '.')
-							.trim()
+						.toString()
+						.replace(/\./g, '')
+						.replace(/,/g, '.')
+						.trim()
 					) || 0;
 				}
 
@@ -7628,7 +10768,7 @@
 				}
 				const workbook = XLSX.utils.book_new();
 				XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Rencana Pengeluaran");
-				XLSX.writeFile(workbook, `laporan_rencana_pengeluaran_tahun_ajaran_${tahun_ajaran_rencana_pengeluaran}.xlsx`);
+				XLSX.writeFile(workbook, `laporan_rencana_pengeluaran_tahun_ajaran_${spp_nama_tahun_ajaran_file(tahun_ajaran_rencana_pengeluaran)}.xlsx`);
 
 				$('#btn_print_laporan_excel').attr('disabled', false);
 				$('#btn_print_laporan_excel').html('<i class="fa fa-file-excel me-1"></i> Excel');
@@ -7661,15 +10801,16 @@
 					);
 					return;
 				}
+
 				function toNumber(value) {
 					if (!value) return '';
 					let angka = value.toString().replace(/[^\d]/g, '');
 					return angka == '' ? '' : parseFloat(angka);
 				}
 
-				tableRows.each(function () {
+				tableRows.each(function() {
 					let cells = [];
-					$(this).find('td').each(function () {
+					$(this).find('td').each(function() {
 						cells.push($(this).text().trim());
 					});
 
@@ -7697,24 +10838,44 @@
 				let excelRange = XLSX.utils.decode_range(worksheet['!ref']);
 				for (let R = 0; R <= excelRange.e.r; R++) {
 					[3, 4, 5, 7, 8]
-						.forEach(C => {
-							let addr = XLSX.utils.encode_cell({ r: R, c: C });
-							if (worksheet[addr]) {
-								worksheet[addr].z = '#,##0';
-							}
+					.forEach(C => {
+						let addr = XLSX.utils.encode_cell({
+							r: R,
+							c: C
 						});
+						if (worksheet[addr]) {
+							worksheet[addr].z = '#,##0';
+						}
+					});
 				}
 
-				worksheet["!cols"] = [
-					{ wch: 5 },
-					{ wch: 35 },
-					{ wch: 12 },
-					{ wch: 10 },
-					{ wch: 18 },
-					{ wch: 18 },
-					{ wch: 20 },
-					{ wch: 20 },
-					{ wch: 20 }
+				worksheet["!cols"] = [{
+						wch: 5
+					},
+					{
+						wch: 35
+					},
+					{
+						wch: 12
+					},
+					{
+						wch: 10
+					},
+					{
+						wch: 18
+					},
+					{
+						wch: 18
+					},
+					{
+						wch: 20
+					},
+					{
+						wch: 20
+					},
+					{
+						wch: 20
+					}
 				];
 
 				const range = XLSX.utils.decode_range(worksheet['!ref']);
@@ -7737,7 +10898,7 @@
 				}
 				const workbook = XLSX.utils.book_new();
 				XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Rencana Pemasukan");
-				XLSX.writeFile(workbook, `laporan_rencana_pemasukan_tahun_ajaran_${tahun_ajaran}.xlsx`);
+				XLSX.writeFile(workbook, `laporan_rencana_pemasukan_tahun_ajaran_${spp_nama_tahun_ajaran_file(tahun_ajaran)}.xlsx`);
 				$('#btn_print_laporan_excel').attr('disabled', false);
 				$('#btn_print_laporan_excel').html('<i class="fa fa-file-excel me-1"></i> Excel');
 			}, 3000);
@@ -7933,7 +11094,8 @@
 					"September",
 					"Oktober",
 					"November",
-					"Desember"]);
+					"Desember"
+				]);
 
 				const tableRows = document.querySelectorAll("#data_laporan_olah_in tbody tr");
 				if (tableRows.length === 0) {
@@ -7959,7 +11121,10 @@
 				const range = XLSX.utils.decode_range(worksheet['!ref']);
 				for (let R = 4; R <= range.e.r; ++R) {
 					for (let C = 1; C <= 12; ++C) {
-						const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+						const cellAddress = XLSX.utils.encode_cell({
+							r: R,
+							c: C
+						});
 						if (worksheet[cellAddress]) {
 							worksheet[cellAddress].t = 'n';
 							worksheet[cellAddress].z = '#,##0';
@@ -7969,28 +11134,60 @@
 
 				worksheet["!cols"] = [
 					// { wch: 5 },   // No
-					{ wch: 35 },  // Akun
-					{ wch: 15 }, // Jan
-					{ wch: 15 }, // Feb
-					{ wch: 15 }, // Mar
-					{ wch: 15 }, // Apr
-					{ wch: 15 }, // Mei
-					{ wch: 15 }, // Jun
-					{ wch: 15 }, // Jul
-					{ wch: 15 }, // Agu
-					{ wch: 15 }, // Sep
-					{ wch: 15 }, // Okt
-					{ wch: 15 }, // Nov
-					{ wch: 15 }, // Des
+					{
+						wch: 35
+					}, // Akun
+					{
+						wch: 15
+					}, // Jan
+					{
+						wch: 15
+					}, // Feb
+					{
+						wch: 15
+					}, // Mar
+					{
+						wch: 15
+					}, // Apr
+					{
+						wch: 15
+					}, // Mei
+					{
+						wch: 15
+					}, // Jun
+					{
+						wch: 15
+					}, // Jul
+					{
+						wch: 15
+					}, // Agu
+					{
+						wch: 15
+					}, // Sep
+					{
+						wch: 15
+					}, // Okt
+					{
+						wch: 15
+					}, // Nov
+					{
+						wch: 15
+					}, // Des
 				];
 
 				for (let R = range.s.r; R <= range.e.r; ++R) {
 					for (let C = range.s.c; C <= range.e.c; ++C) {
-						const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+						const cell_address = XLSX.utils.encode_cell({
+							r: R,
+							c: C
+						});
 						const cell = worksheet[cell_address];
 						if (cell) {
 							cell.s = cell.s || {};
-							cell.s.alignment = { wrapText: true, vertical: "top" };
+							cell.s.alignment = {
+								wrapText: true,
+								vertical: "top"
+							};
 						}
 					}
 				}
@@ -8027,7 +11224,8 @@
 					"September",
 					"Oktober",
 					"November",
-					"Desember"]);
+					"Desember"
+				]);
 
 				const tableRows = document.querySelectorAll("#data_laporan_olah_out tbody tr");
 				if (tableRows.length === 0) {
@@ -8054,7 +11252,10 @@
 
 				for (let R = 4; R <= range.e.r; ++R) {
 					for (let C = 1; C <= 12; ++C) {
-						const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+						const cellAddress = XLSX.utils.encode_cell({
+							r: R,
+							c: C
+						});
 						if (worksheet[cellAddress]) {
 							worksheet[cellAddress].t = 'n';
 							worksheet[cellAddress].z = '#,##0';
@@ -8064,28 +11265,60 @@
 
 				worksheet["!cols"] = [
 					// { wch: 5 },   // No
-					{ wch: 35 },  // Akun
-					{ wch: 15 }, // Jan
-					{ wch: 15 }, // Feb
-					{ wch: 15 }, // Mar
-					{ wch: 15 }, // Apr
-					{ wch: 15 }, // Mei
-					{ wch: 15 }, // Jun
-					{ wch: 15 }, // Jul
-					{ wch: 15 }, // Agu
-					{ wch: 15 }, // Sep
-					{ wch: 15 }, // Okt
-					{ wch: 15 }, // Nov
-					{ wch: 15 }, // Des
+					{
+						wch: 35
+					}, // Akun
+					{
+						wch: 15
+					}, // Jan
+					{
+						wch: 15
+					}, // Feb
+					{
+						wch: 15
+					}, // Mar
+					{
+						wch: 15
+					}, // Apr
+					{
+						wch: 15
+					}, // Mei
+					{
+						wch: 15
+					}, // Jun
+					{
+						wch: 15
+					}, // Jul
+					{
+						wch: 15
+					}, // Agu
+					{
+						wch: 15
+					}, // Sep
+					{
+						wch: 15
+					}, // Okt
+					{
+						wch: 15
+					}, // Nov
+					{
+						wch: 15
+					}, // Des
 				];
 
 				for (let R = range.s.r; R <= range.e.r; ++R) {
 					for (let C = range.s.c; C <= range.e.c; ++C) {
-						const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+						const cell_address = XLSX.utils.encode_cell({
+							r: R,
+							c: C
+						});
 						const cell = worksheet[cell_address];
 						if (cell) {
 							cell.s = cell.s || {};
-							cell.s.alignment = { wrapText: true, vertical: "top" };
+							cell.s.alignment = {
+								wrapText: true,
+								vertical: "top"
+							};
 						}
 					}
 				}
@@ -8253,7 +11486,7 @@
 				}
 				const workbook = XLSX.utils.book_new();
 				XLSX.utils.book_append_sheet(workbook, worksheet, "Perbandingan RAB Pengeluaran");
-				XLSX.writeFile(workbook, `laporan_perbandingan_rencana_pengeluaran_tahun_ajaran_${tahun_ajaran_perbandingan_rab_pengeluaran}.xlsx`);
+				XLSX.writeFile(workbook, `laporan_perbandingan_rencana_pengeluaran_tahun_ajaran_${spp_nama_tahun_ajaran_file(tahun_ajaran_perbandingan_rab_pengeluaran)}.xlsx`);
 
 				$('#btn_print_laporan_excel').attr('disabled', false);
 				$('#btn_print_laporan_excel').html('<i class="fa fa-file-excel me-1"></i> Excel');
@@ -8299,6 +11532,7 @@
 				data.push(header2);
 				const jumlahKolomBulan = bulanArr.length * 4;
 				const totalKolom = jumlahKolomBulan + 2;
+
 				function toNumber(value) {
 					if (!value) return '';
 					let angka = value.toString().replace(/[^\d-]/g, '');
@@ -8411,7 +11645,7 @@
 				}
 				const workbook = XLSX.utils.book_new();
 				XLSX.utils.book_append_sheet(workbook, worksheet, "Perbandingan RAB Pemasukann");
-				XLSX.writeFile(workbook, `laporan_perbandingan_rencana_pemasukan_tahun_ajaran_${tahun_ajaran_perbandingan_rab_pemasukan}.xlsx`);
+				XLSX.writeFile(workbook, `laporan_perbandingan_rencana_pemasukan_tahun_ajaran_${spp_nama_tahun_ajaran_file(tahun_ajaran_perbandingan_rab_pemasukan)}.xlsx`);
 
 				$('#btn_print_laporan_excel').attr('disabled', false);
 				$('#btn_print_laporan_excel').html('<i class="fa fa-file-excel me-1"></i> Excel');
@@ -8475,9 +11709,9 @@
 
 					return Number(
 						value.toString()
-							.replace(/\./g, '')
-							.replace(/,/g, '')
-							.trim()
+						.replace(/\./g, '')
+						.replace(/,/g, '')
+						.trim()
 					) || 0;
 				}
 
@@ -8584,24 +11818,132 @@
 				 */
 				worksheet["!merges"] = [
 					// Judul
-					{ s: { r: 0, c: 0 }, e: { r: 0, c: 12 } },
-					{ s: { r: 1, c: 0 }, e: { r: 1, c: 12 } },
-					{ s: { r: 2, c: 0 }, e: { r: 2, c: 12 } },
+					{
+						s: {
+							r: 0,
+							c: 0
+						},
+						e: {
+							r: 0,
+							c: 12
+						}
+					},
+					{
+						s: {
+							r: 1,
+							c: 0
+						},
+						e: {
+							r: 1,
+							c: 12
+						}
+					},
+					{
+						s: {
+							r: 2,
+							c: 0
+						},
+						e: {
+							r: 2,
+							c: 12
+						}
+					},
 
 					// Header rowspan
-					{ s: { r: 4, c: 0 }, e: { r: 5, c: 0 } }, // No
-					{ s: { r: 4, c: 1 }, e: { r: 5, c: 1 } }, // Nama
-					{ s: { r: 4, c: 2 }, e: { r: 5, c: 2 } }, // Jabatan
+					{
+						s: {
+							r: 4,
+							c: 0
+						},
+						e: {
+							r: 5,
+							c: 0
+						}
+					}, // No
+					{
+						s: {
+							r: 4,
+							c: 1
+						},
+						e: {
+							r: 5,
+							c: 1
+						}
+					}, // Nama
+					{
+						s: {
+							r: 4,
+							c: 2
+						},
+						e: {
+							r: 5,
+							c: 2
+						}
+					}, // Jabatan
 
 					// Header colspan
-					{ s: { r: 4, c: 3 }, e: { r: 4, c: 5 } }, // Gaji
-					{ s: { r: 4, c: 6 }, e: { r: 4, c: 8 } }, // Tunjangan
+					{
+						s: {
+							r: 4,
+							c: 3
+						},
+						e: {
+							r: 4,
+							c: 5
+						}
+					}, // Gaji
+					{
+						s: {
+							r: 4,
+							c: 6
+						},
+						e: {
+							r: 4,
+							c: 8
+						}
+					}, // Tunjangan
 
 					// Header rowspan akhir
-					{ s: { r: 4, c: 9 }, e: { r: 5, c: 9 } },   // Jumlah
-					{ s: { r: 4, c: 10 }, e: { r: 5, c: 10 } }, // Jumlah Kotor
-					{ s: { r: 4, c: 11 }, e: { r: 5, c: 11 } }, // Jumlah Hadir
-					{ s: { r: 4, c: 12 }, e: { r: 5, c: 12 } }  // Jumlah Penerimaan
+					{
+						s: {
+							r: 4,
+							c: 9
+						},
+						e: {
+							r: 5,
+							c: 9
+						}
+					}, // Jumlah
+					{
+						s: {
+							r: 4,
+							c: 10
+						},
+						e: {
+							r: 5,
+							c: 10
+						}
+					}, // Jumlah Kotor
+					{
+						s: {
+							r: 4,
+							c: 11
+						},
+						e: {
+							r: 5,
+							c: 11
+						}
+					}, // Jumlah Hadir
+					{
+						s: {
+							r: 4,
+							c: 12
+						},
+						e: {
+							r: 5,
+							c: 12
+						}
+					} // Jumlah Penerimaan
 				];
 
 				/*
@@ -8618,7 +11960,10 @@
 				 */
 				for (let R = 6; R <= range.e.r; R++) {
 					for (let C = 5; C <= 12; C++) {
-						let address = XLSX.utils.encode_cell({ r: R, c: C });
+						let address = XLSX.utils.encode_cell({
+							r: R,
+							c: C
+						});
 
 						if (worksheet[address]) {
 							worksheet[address].z = '#,##0';
@@ -8629,20 +11974,45 @@
 				/*
 				 * Lebar kolom.
 				 */
-				worksheet["!cols"] = [
-					{ wch: 5 },   // No
-					{ wch: 35 },  // Nama
-					{ wch: 25 },  // Jabatan
-					{ wch: 12 },  // Masa Kerja
-					{ wch: 15 },  // Pend. Terakhir
-					{ wch: 18 },  // Gaji Pokok
-					{ wch: 18 },  // Struktural
-					{ wch: 18 },  // Pendidikan
-					{ wch: 18 },  // Wali Kelas
-					{ wch: 18 },  // Jumlah
-					{ wch: 18 },  // Jumlah Kotor
-					{ wch: 14 },  // Jumlah Hadir
-					{ wch: 20 }   // Jumlah Penerimaan
+				worksheet["!cols"] = [{
+						wch: 5
+					}, // No
+					{
+						wch: 35
+					}, // Nama
+					{
+						wch: 25
+					}, // Jabatan
+					{
+						wch: 12
+					}, // Masa Kerja
+					{
+						wch: 15
+					}, // Pend. Terakhir
+					{
+						wch: 18
+					}, // Gaji Pokok
+					{
+						wch: 18
+					}, // Struktural
+					{
+						wch: 18
+					}, // Pendidikan
+					{
+						wch: 18
+					}, // Wali Kelas
+					{
+						wch: 18
+					}, // Jumlah
+					{
+						wch: 18
+					}, // Jumlah Kotor
+					{
+						wch: 14
+					}, // Jumlah Hadir
+					{
+						wch: 20
+					} // Jumlah Penerimaan
 				];
 
 				/*
@@ -8651,7 +12021,10 @@
 				 */
 				for (let R = range.s.r; R <= range.e.r; ++R) {
 					for (let C = range.s.c; C <= range.e.c; ++C) {
-						const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+						const cell_address = XLSX.utils.encode_cell({
+							r: R,
+							c: C
+						});
 						const cell = worksheet[cell_address];
 
 						if (cell) {
@@ -8732,8 +12105,8 @@
 				let currentSemester = "";
 				let currentPeriode = "";
 
-				let spanStartIndex = null;              // index baris awal group (di worksheet)
-				let currentRowIndex = data.length;      // row index Excel saat ini (0-based pada array data)
+				let spanStartIndex = null; // index baris awal group (di worksheet)
+				let currentRowIndex = data.length; // row index Excel saat ini (0-based pada array data)
 				let mergeInstructions = [];
 
 				// Helper escape (kalau mau aman dari karakter spesial)
@@ -8773,10 +12146,46 @@
 						// Tutup merge group sebelumnya (kalau panjangnya > 1 baris)
 						if (isNewGroup && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
 							// Merge kolom No (c=0), Nama (c=1), Semester (c=3), Periode (c=4)
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 3 }, e: { r: currentRowIndex - 1, c: 3 } });
-							mergeInstructions.push({ s: { r: spanStartIndex, c: 4 }, e: { r: currentRowIndex - 1, c: 4 } });
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 0
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 0
+								}
+							});
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 1
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 1
+								}
+							});
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 3
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 3
+								}
+							});
+							mergeInstructions.push({
+								s: {
+									r: spanStartIndex,
+									c: 4
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 4
+								}
+							});
 						}
 
 						if (isNewGroup) {
@@ -8793,10 +12202,46 @@
 
 					// Jika ini baris terakhir, tutup merge terakhir jika perlu
 					if (idx === tableRows.length - 1 && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-						mergeInstructions.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-						mergeInstructions.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
-						mergeInstructions.push({ s: { r: spanStartIndex, c: 3 }, e: { r: currentRowIndex - 1, c: 3 } });
-						mergeInstructions.push({ s: { r: spanStartIndex, c: 4 }, e: { r: currentRowIndex - 1, c: 4 } });
+						mergeInstructions.push({
+							s: {
+								r: spanStartIndex,
+								c: 0
+							},
+							e: {
+								r: currentRowIndex - 1,
+								c: 0
+							}
+						});
+						mergeInstructions.push({
+							s: {
+								r: spanStartIndex,
+								c: 1
+							},
+							e: {
+								r: currentRowIndex - 1,
+								c: 1
+							}
+						});
+						mergeInstructions.push({
+							s: {
+								r: spanStartIndex,
+								c: 3
+							},
+							e: {
+								r: currentRowIndex - 1,
+								c: 3
+							}
+						});
+						mergeInstructions.push({
+							s: {
+								r: spanStartIndex,
+								c: 4
+							},
+							e: {
+								r: currentRowIndex - 1,
+								c: 4
+							}
+						});
 					}
 				});
 
@@ -8804,23 +12249,38 @@
 				worksheet["!merges"] = mergeInstructions;
 
 				// Set lebar kolom
-				worksheet["!cols"] = [
-					{ wch: 5 },   // No
-					{ wch: 28 },  // Nama Pegawai
-					{ wch: 22 },  // Tanggal Belum Diisi
-					{ wch: 14 },  // Semester
-					{ wch: 16 },  // Periode
+				worksheet["!cols"] = [{
+						wch: 5
+					}, // No
+					{
+						wch: 28
+					}, // Nama Pegawai
+					{
+						wch: 22
+					}, // Tanggal Belum Diisi
+					{
+						wch: 14
+					}, // Semester
+					{
+						wch: 16
+					}, // Periode
 				];
 
 				// Wrap text & align top
 				const range = XLSX.utils.decode_range(worksheet['!ref']);
 				for (let R = range.s.r; R <= range.e.r; ++R) {
 					for (let C = range.s.c; C <= range.e.c; ++C) {
-						const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+						const cell_address = XLSX.utils.encode_cell({
+							r: R,
+							c: C
+						});
 						const cell = worksheet[cell_address];
 						if (cell) {
 							cell.s = cell.s || {};
-							cell.s.alignment = { wrapText: true, vertical: "top" };
+							cell.s.alignment = {
+								wrapText: true,
+								vertical: "top"
+							};
 						}
 					}
 				}
@@ -8832,6 +12292,547 @@
 
 				$('#btn_print_laporan_excel').attr('disabled', false).html('<i class="fa fa-file-excel me-1"></i> Excel');
 			}, 500);
+		} else if (cek_btn === 'laporan_payroll_gaji_guru_dan_karyawan') {
+			setTimeout(() => {
+				const bulan = document.querySelector('select[name="filter_bulan"]')?.value || '';
+				const tahun = document.querySelector('select[name="filter_tahun"]')?.value || '';
+
+				if (!bulan || !tahun) {
+					alert("Pastikan bulan dan tahun sudah dipilih.");
+
+					$('#btn_print_laporan_excel').attr('disabled', false);
+					$('#btn_print_laporan_excel').html('<i class="fa fa-file-excel me-1"></i> Excel');
+
+					return;
+				}
+
+				let data = [];
+
+				// Header laporan
+				data.push(["PAYROLL GAJI GURU DAN KARYAWAN"]);
+				data.push(["SD KREATIF MUHAMMADIYAH 1 LUMAJANG"]);
+				data.push([]);
+				data.push([`BULAN: ${getNamaBulan(bulan)} ${tahun}`]);
+				data.push(["No", "Nama", "No Rekening", "Nominal"]);
+
+				const tableRows = document.querySelectorAll("#data_laporan_payroll_gaji_guru_karyawan tbody tr");
+
+				if (tableRows.length === 0) {
+					alert("Tidak ada data untuk diekspor.");
+
+					$('#btn_print_laporan_excel').attr('disabled', false);
+					$('#btn_print_laporan_excel').html('<i class="fa fa-file-excel me-1"></i> Excel');
+
+					return;
+				}
+
+				function toNumber(value) {
+					if (value === '' || value == null || value === '-') {
+						return '';
+					}
+
+					return Number(
+						value.toString()
+						.replace(/\./g, '')
+						.replace(/,/g, '')
+						.trim()
+					) || '';
+				}
+
+				let total_nominal = 0;
+				let adaDataValid = false;
+
+				tableRows.forEach(row => {
+					let cells = Array.from(row.cells).map(cell => cell.innerText.trim());
+
+					/*
+					 * Struktur tabel:
+					 * 0 No
+					 * 1 Nama
+					 * 2 No Rekening
+					 * 3 Nominal
+					 */
+
+					if (cells.length < 4) {
+						return;
+					}
+
+					let isiBaris = cells.join(' ').toLowerCase();
+
+					if (
+						isiBaris.includes('tidak ada data') ||
+						isiBaris.includes('memuat data') ||
+						isiBaris.includes('gagal mengambil data') ||
+						isiBaris.includes('data penggajian belum tersedia')
+					) {
+						return;
+					}
+
+					let no = cells[0];
+					let nama = cells[1];
+					let no_rekening = cells[2];
+					let nominal = toNumber(cells[3]);
+
+					total_nominal += Number(nominal) || 0;
+					adaDataValid = true;
+
+					data.push([
+						no,
+						nama,
+						no_rekening,
+						nominal
+					]);
+				});
+
+				if (!adaDataValid) {
+					alert("Tidak ada data untuk diekspor.");
+
+					$('#btn_print_laporan_excel').attr('disabled', false);
+					$('#btn_print_laporan_excel').html('<i class="fa fa-file-excel me-1"></i> Excel');
+
+					return;
+				}
+
+				// Jumlah
+				data.push([
+					'JUMLAH',
+					'',
+					'',
+					total_nominal
+				]);
+
+				const startTtdRow = data.length;
+
+				// Jarak sebelum tanda tangan
+				data.push([]);
+				data.push([]);
+
+				// Tanggal
+				data.push([
+					'',
+					'',
+					`Lumajang, ${tanggal_laporan_payroll}`,
+					''
+				]);
+
+				// Jabatan baris 1
+				data.push([
+					'Mengetahui,',
+					'',
+					'Bendahara',
+					''
+				]);
+
+				// Jabatan baris 2
+				data.push([
+					'Kepala Sekolah',
+					'',
+					'',
+					''
+				]);
+
+				// Ruang tanda tangan
+				data.push([]);
+				data.push([]);
+				data.push([]);
+				data.push([]);
+
+				// Nama tanda tangan
+				data.push([
+					'Dimas Doddy Priyambodho, S.Ag, M.Pd',
+					'',
+					'Nurlaili Budi Indahwati, S.Psi',
+					''
+				]);
+
+				const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+				let excelRange = XLSX.utils.decode_range(worksheet['!ref']);
+
+				/*
+				 * Format angka kolom Nominal.
+				 * Kolom D = index 3.
+				 */
+				for (let R = 0; R <= excelRange.e.r; R++) {
+					let addr = XLSX.utils.encode_cell({
+						r: R,
+						c: 3
+					});
+
+					if (worksheet[addr]) {
+						worksheet[addr].z = '#,##0';
+					}
+				}
+
+				/*
+				 * Lebar kolom.
+				 */
+				worksheet["!cols"] = [{
+						wch: 8
+					}, // No
+					{
+						wch: 45
+					}, // Nama
+					{
+						wch: 25
+					}, // No Rekening
+					{
+						wch: 20
+					} // Nominal
+				];
+
+				const range = XLSX.utils.decode_range(worksheet['!ref']);
+
+				/*
+				 * Style umum.
+				 */
+				for (let R = range.s.r; R <= range.e.r; ++R) {
+					for (let C = range.s.c; C <= range.e.c; ++C) {
+						const cell_address = XLSX.utils.encode_cell({
+							r: R,
+							c: C
+						});
+
+						const cell = worksheet[cell_address];
+
+						if (cell) {
+							cell.s = cell.s || {};
+							cell.s.alignment = {
+								wrapText: true,
+								vertical: "top"
+							};
+						}
+					}
+				}
+
+				/*
+				 * Merge cell.
+				 */
+				worksheet['!merges'] = [
+					// Judul laporan
+					{
+						s: {
+							r: 0,
+							c: 0
+						},
+						e: {
+							r: 0,
+							c: 3
+						}
+					},
+
+					// Nama sekolah
+					{
+						s: {
+							r: 1,
+							c: 0
+						},
+						e: {
+							r: 1,
+							c: 3
+						}
+					},
+
+					// Bulan
+					{
+						s: {
+							r: 3,
+							c: 0
+						},
+						e: {
+							r: 3,
+							c: 3
+						}
+					},
+
+					// Jumlah, merge A sampai C
+					{
+						s: {
+							r: startTtdRow - 1,
+							c: 0
+						},
+						e: {
+							r: startTtdRow - 1,
+							c: 2
+						}
+					},
+
+					// Tanggal, merge C sampai D
+					{
+						s: {
+							r: startTtdRow + 2,
+							c: 2
+						},
+						e: {
+							r: startTtdRow + 2,
+							c: 3
+						}
+					},
+
+					// Mengetahui, merge A sampai B
+					{
+						s: {
+							r: startTtdRow + 3,
+							c: 0
+						},
+						e: {
+							r: startTtdRow + 3,
+							c: 1
+						}
+					},
+
+					// Bendahara, merge C sampai D
+					{
+						s: {
+							r: startTtdRow + 3,
+							c: 2
+						},
+						e: {
+							r: startTtdRow + 3,
+							c: 3
+						}
+					},
+
+					// Kepala Sekolah, merge A sampai B
+					{
+						s: {
+							r: startTtdRow + 4,
+							c: 0
+						},
+						e: {
+							r: startTtdRow + 4,
+							c: 1
+						}
+					},
+
+					// Nama Kepala Sekolah, merge A sampai B
+					{
+						s: {
+							r: startTtdRow + 9,
+							c: 0
+						},
+						e: {
+							r: startTtdRow + 9,
+							c: 1
+						}
+					},
+
+					// Nama Bendahara, merge C sampai D
+					{
+						s: {
+							r: startTtdRow + 9,
+							c: 2
+						},
+						e: {
+							r: startTtdRow + 9,
+							c: 3
+						}
+					}
+				];
+
+				/*
+				 * Style judul.
+				 */
+				['A1', 'A2', 'A4'].forEach(cell => {
+					if (worksheet[cell]) {
+						worksheet[cell].s = {
+							font: {
+								bold: true
+							},
+							alignment: {
+								horizontal: "center",
+								vertical: "center"
+							}
+						};
+					}
+				});
+
+				/*
+				 * Style header tabel.
+				 */
+				['A5', 'B5', 'C5', 'D5'].forEach(cell => {
+					if (worksheet[cell]) {
+						worksheet[cell].s = {
+							font: {
+								bold: true
+							},
+							alignment: {
+								horizontal: "center",
+								vertical: "center"
+							}
+						};
+					}
+				});
+
+				/*
+				 * Style data tabel.
+				 */
+				for (let R = 5; R < startTtdRow - 1; R++) {
+					let cellNo = worksheet[XLSX.utils.encode_cell({
+						r: R,
+						c: 0
+					})];
+
+					let cellNama = worksheet[XLSX.utils.encode_cell({
+						r: R,
+						c: 1
+					})];
+
+					let cellRekening = worksheet[XLSX.utils.encode_cell({
+						r: R,
+						c: 2
+					})];
+
+					let cellNominal = worksheet[XLSX.utils.encode_cell({
+						r: R,
+						c: 3
+					})];
+
+					if (cellNo) {
+						cellNo.s = {
+							alignment: {
+								horizontal: "center",
+								vertical: "center"
+							}
+						};
+					}
+
+					if (cellNama) {
+						cellNama.s = {
+							alignment: {
+								horizontal: "left",
+								vertical: "center"
+							}
+						};
+					}
+
+					if (cellRekening) {
+						cellRekening.s = {
+							alignment: {
+								horizontal: "center",
+								vertical: "center"
+							}
+						};
+					}
+
+					if (cellNominal) {
+						cellNominal.s = {
+							alignment: {
+								horizontal: "right",
+								vertical: "center"
+							}
+						};
+
+						cellNominal.z = '#,##0';
+					}
+				}
+
+				/*
+				 * Style jumlah.
+				 * startTtdRow adalah index setelah baris jumlah.
+				 * Baris jumlah Excel = startTtdRow.
+				 */
+				let jumlahLabelCell = `A${startTtdRow}`;
+				let jumlahNominalCell = `D${startTtdRow}`;
+
+				if (worksheet[jumlahLabelCell]) {
+					worksheet[jumlahLabelCell].s = {
+						font: {
+							bold: true
+						},
+						alignment: {
+							horizontal: "center",
+							vertical: "center"
+						}
+					};
+				}
+
+				if (worksheet[jumlahNominalCell]) {
+					worksheet[jumlahNominalCell].s = {
+						font: {
+							bold: true
+						},
+						alignment: {
+							horizontal: "right",
+							vertical: "center"
+						}
+					};
+
+					worksheet[jumlahNominalCell].z = '#,##0';
+				}
+
+				/*
+				 * Style tanda tangan.
+				 */
+				[
+					// tanggal
+					`C${startTtdRow + 3}`,
+
+					// jabatan
+					`A${startTtdRow + 4}`,
+					`A${startTtdRow + 5}`,
+					`C${startTtdRow + 4}`,
+
+					// nama tanda tangan
+					`A${startTtdRow + 10}`,
+					`C${startTtdRow + 10}`
+				].forEach(cell => {
+					if (worksheet[cell]) {
+						worksheet[cell].s = {
+							alignment: {
+								horizontal: "center",
+								vertical: "center",
+								wrapText: true
+							}
+						};
+					}
+				});
+
+				const workbook = XLSX.utils.book_new();
+
+				XLSX.utils.book_append_sheet(
+					workbook,
+					worksheet,
+					"Laporan Payroll Gaji"
+				);
+
+				XLSX.writeFile(
+					workbook,
+					`laporan_payroll_gaji_guru_dan_karyawan_bulan_${getNamaBulan(bulan)}_${tahun}.xlsx`
+				);
+
+				$('#btn_print_laporan_excel').attr('disabled', false);
+				$('#btn_print_laporan_excel').html('<i class="fa fa-file-excel me-1"></i> Excel');
+
+			}, 1500);
+		} else if (cek_btn == 'spp_pembayaran') {
+			data_spp_pembayaran(function(filter, metadata) {
+				excel_spp_pembayaran(filter, metadata);
+			});
+		} else if (cek_btn == 'spp_per_siswa') {
+			data_spp_per_siswa(function(filter) {
+				excel_spp_per_siswa(filter);
+			});
+		} else if (cek_btn == 'spp_per_kelas') {
+			data_spp_per_kelas(function(filter, metadata) {
+				excel_spp_per_kelas(filter, metadata);
+			});
+		} else if (cek_btn == 'spp_per_jenis') {
+			data_spp_per_jenis(function(filter, metadata) {
+				excel_spp_per_jenis(filter, metadata);
+			});
+		} else if (cek_btn == 'spp_tunggakan') {
+			data_spp_tunggakan(function(filter, metadata) {
+				excel_spp_tunggakan(filter, metadata);
+			});
+		} else if (cek_btn == 'spp_tabungan') {
+			data_spp_tabungan(function(filter, metadata) {
+				excel_spp_tabungan(filter, metadata);
+			});
+		} else if (cek_btn == 'spp_pembatalan') {
+			data_spp_pembatalan(function(filter, metadata, jumlahBaris) {
+				excel_spp_pembatalan(filter, metadata, jumlahBaris);
+			});
 		} else if (cek_btn == 'Guru') {
 			const filter = document.querySelector('input[name="filter"]:checked')?.value;
 
@@ -8873,8 +12874,14 @@
 				data.push(["No", "Nama Guru", "Kelas", "Mapel", "Tanggal Belum Diisi", "Semester", "Periode"]);
 
 				// Merge hanya untuk: No(0), Nama(1), Semester(5), Periode(6)
-				let lastNo = "", lastNama = "", lastSemester = "", lastPeriode = "";
-				let currentNo = "", currentNama = "", currentSemester = "", currentPeriode = "";
+				let lastNo = "",
+					lastNama = "",
+					lastSemester = "",
+					lastPeriode = "";
+				let currentNo = "",
+					currentNama = "",
+					currentSemester = "",
+					currentPeriode = "";
 				let spanStartIndex = null;
 				let currentRowIndex = data.length;
 				const merges = [];
@@ -8911,10 +12918,46 @@
 
 						// Tutup merge grup sebelumnya (kalau ada >1 baris)
 						if (isNewGroup && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-							merges.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } }); // No
-							merges.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } }); // Nama
-							merges.push({ s: { r: spanStartIndex, c: 5 }, e: { r: currentRowIndex - 1, c: 5 } }); // Semester
-							merges.push({ s: { r: spanStartIndex, c: 6 }, e: { r: currentRowIndex - 1, c: 6 } }); // Periode
+							merges.push({
+								s: {
+									r: spanStartIndex,
+									c: 0
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 0
+								}
+							}); // No
+							merges.push({
+								s: {
+									r: spanStartIndex,
+									c: 1
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 1
+								}
+							}); // Nama
+							merges.push({
+								s: {
+									r: spanStartIndex,
+									c: 5
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 5
+								}
+							}); // Semester
+							merges.push({
+								s: {
+									r: spanStartIndex,
+									c: 6
+								},
+								e: {
+									r: currentRowIndex - 1,
+									c: 6
+								}
+							}); // Periode
 						}
 
 						if (isNewGroup) {
@@ -8931,35 +12974,90 @@
 
 					// Tutup grup terakhir bila perlu
 					if (idx === tableRows.length - 1 && spanStartIndex !== null && currentRowIndex > spanStartIndex + 1) {
-						merges.push({ s: { r: spanStartIndex, c: 0 }, e: { r: currentRowIndex - 1, c: 0 } });
-						merges.push({ s: { r: spanStartIndex, c: 1 }, e: { r: currentRowIndex - 1, c: 1 } });
-						merges.push({ s: { r: spanStartIndex, c: 5 }, e: { r: currentRowIndex - 1, c: 5 } });
-						merges.push({ s: { r: spanStartIndex, c: 6 }, e: { r: currentRowIndex - 1, c: 6 } });
+						merges.push({
+							s: {
+								r: spanStartIndex,
+								c: 0
+							},
+							e: {
+								r: currentRowIndex - 1,
+								c: 0
+							}
+						});
+						merges.push({
+							s: {
+								r: spanStartIndex,
+								c: 1
+							},
+							e: {
+								r: currentRowIndex - 1,
+								c: 1
+							}
+						});
+						merges.push({
+							s: {
+								r: spanStartIndex,
+								c: 5
+							},
+							e: {
+								r: currentRowIndex - 1,
+								c: 5
+							}
+						});
+						merges.push({
+							s: {
+								r: spanStartIndex,
+								c: 6
+							},
+							e: {
+								r: currentRowIndex - 1,
+								c: 6
+							}
+						});
 					}
 				});
 
 				const ws = XLSX.utils.aoa_to_sheet(data);
 				ws["!merges"] = merges;
 
-				ws["!cols"] = [
-					{ wch: 5 },   // No
-					{ wch: 26 },  // Nama
-					{ wch: 22 },  // Kelas
-					{ wch: 18 },  // Mapel
-					{ wch: 22 },  // Tanggal
-					{ wch: 12 },  // Semester
-					{ wch: 14 },  // Periode
+				ws["!cols"] = [{
+						wch: 5
+					}, // No
+					{
+						wch: 26
+					}, // Nama
+					{
+						wch: 22
+					}, // Kelas
+					{
+						wch: 18
+					}, // Mapel
+					{
+						wch: 22
+					}, // Tanggal
+					{
+						wch: 12
+					}, // Semester
+					{
+						wch: 14
+					}, // Periode
 				];
 
 				// Wrap & align
 				const range = XLSX.utils.decode_range(ws['!ref']);
 				for (let R = range.s.r; R <= range.e.r; ++R) {
 					for (let C = range.s.c; C <= range.e.c; ++C) {
-						const addr = XLSX.utils.encode_cell({ r: R, c: C });
+						const addr = XLSX.utils.encode_cell({
+							r: R,
+							c: C
+						});
 						const cell = ws[addr];
 						if (cell) {
 							cell.s = cell.s || {};
-							cell.s.alignment = { wrapText: true, vertical: "top" };
+							cell.s.alignment = {
+								wrapText: true,
+								vertical: "top"
+							};
 						}
 					}
 				}
@@ -8971,7 +13069,7 @@
 				$('#btn_print_laporan_excel')
 					.attr('disabled', false)
 					.html('<i class="fa fa-file-excel me-1"></i> Excel');
-			}, 400);
+			}, 1500);
 		}
 
 	});
@@ -9018,6 +13116,10 @@
 		const opt = sel?.options[sel.selectedIndex];
 		const nama = isSemua ? 'SEMUA PEGAWAI' : (opt?.getAttribute('data-label') || '-');
 		const jab = isSemua ? '-' : (opt?.getAttribute('data-jabatan') || '-');
-		return { isSemua, nama, jab };
+		return {
+			isSemua,
+			nama,
+			jab
+		};
 	}
 </script>

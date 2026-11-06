@@ -23,7 +23,13 @@ class M_pegawai extends CI_Model
 		return $pegawai;
 	}
 
+public function nomor_urut_berikutnya()
+{
+	$this->db->select_max('no_urut');
+	$data = $this->db->get('pegawai')->row_array();
 
+	return ((int) ($data['no_urut'] ?? 0)) + 1;
+}
 
 	public function tambah()
 	{
@@ -38,6 +44,7 @@ class M_pegawai extends CI_Model
 		$no_rekening = $this->input->post('no_rekening');
 		$tmt = $this->input->post('tmt');
 		$tahun_tmt = date('Y', strtotime($tmt));
+		$urut = $this->input->post('no_urut');
 
 		$angkatan = $this->db->where('tahun_awal <=', $tahun_tmt)->where('tahun_akhir >=', $tahun_tmt)->get('master_angkatan')->row_array();
 		$data = [
@@ -50,7 +57,8 @@ class M_pegawai extends CI_Model
 			'no_tlp' => $no_telp,
 			'tmt' => $tmt,
 			'angkatan' => $angkatan['angkatan'],
-			'no_rekening'	=> $no_rekening
+			'no_rekening'	=> $no_rekening,
+			'no_urut'	=> $urut
 
 		];
 		$response = $this->db->insert('pegawai', $data);
@@ -115,6 +123,7 @@ class M_pegawai extends CI_Model
 		$tanggal_lahir = $this->input->post('tanggal_lahir');
 		$no_telp = $this->input->post('no_tlp');
 		$no_rekening = $this->input->post('no_rekening');
+		$urut = $this->input->post('no_urut');
 		$tmt = $this->input->post('tmt');
 		$tahun_tmt = date('Y', strtotime($tmt));
 		$angkatan = $this->db->where('tahun_awal <=', $tahun_tmt)->where('tahun_akhir >=', $tahun_tmt)->get('master_angkatan')->row_array();
@@ -129,6 +138,7 @@ class M_pegawai extends CI_Model
 			'no_rekening' => $no_rekening,
 			'tmt' => $tmt,
 			'angkatan' => $angkatan['angkatan'],
+			'no_urut'	=> $urut
 		];
 
 		$response = $this->db->update('pegawai', $data, ['id' => $id_pegawai]);
@@ -197,6 +207,7 @@ class M_pegawai extends CI_Model
 		$this->db->delete('guru_mapel', ['id_guru' => $id]);
 		$this->db->delete('guru', ['id' => $id]);
 		$this->db->delete('user', ['id_pegawai' => $id]);
+		$this->db->delete('gaji', ['id_pegawai' => $id]);
 		$response = $this->db->delete('pegawai', ['id' => $id]);
 
 		return $response;

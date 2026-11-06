@@ -33,6 +33,8 @@ class Cetak_slip_gaji extends CI_Controller
         if ($id_pegawai) {
             $this->db->where('a.id', $id_pegawai);
         }
+        $this->db->order_by("STR_TO_DATE(a.tmt, '%d-%m-%Y')", 'ASC',false);
+        $this->db->order_by('a.no_urut', 'ASC');
         $pegawai = $this->db->get()->result_array();
 
         $result = [];
@@ -48,10 +50,16 @@ class Cetak_slip_gaji extends CI_Controller
 
 
             if ($cek_penggajian) {
-                $potongan_detail = $this->db->query("SELECT mp.nama_potongan, pp.nominal
+                // $potongan_detail = $this->db->query("SELECT mp.nama_potongan, pp.keterangan_potongan,SUM(pp.nominal) AS nominal
+                //     FROM penggajian_potongan pp
+                //     JOIN master_potongan mp ON mp.id = pp.id_master_potongan
+                //     WHERE pp.id_penggajian = ? ", [$cek_penggajian['id']])->result_array();
+                  $potongan_detail = $this->db->query("SELECT mp.id, mp.nama_potongan, SUM(pp.nominal) AS nominal
                     FROM penggajian_potongan pp
                     JOIN master_potongan mp ON mp.id = pp.id_master_potongan
-                    WHERE pp.id_penggajian = ? ", [$cek_penggajian['id']])->result_array();
+                    WHERE pp.id_penggajian = ?
+                    GROUP BY mp.id, mp.nama_potongan
+                    ORDER BY mp.id ASC", [$cek_penggajian['id']])->result_array();
                 $result[] = [
                     'id_pegawai' => $item['id_pegawai'],
                     'nama_pegawai' => $item['nama_pegawai'],

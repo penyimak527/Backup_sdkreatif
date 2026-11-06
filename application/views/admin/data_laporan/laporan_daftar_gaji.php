@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Laporan Daftar Gaji Guru dan Karyawan</title>
+    <title>Laporan Payroll Gaji Guru dan Karyawan</title>
 </head>
 
 <style type="text/css">
@@ -109,7 +109,7 @@
 
 <body>
     <div class="judul">
-        <div>DAFTAR GAJI GURU DAN KARYAWAN</div>
+        <div>PAYROLL GAJI GURU DAN KARYAWAN</div>
         <div>SD KREATIF MUHAMMADIYAH 1 LUMAJANG</div>
         <div>BULAN : <?= strtoupper(htmlspecialchars($judul, ENT_QUOTES, 'UTF-8')); ?></div>
     </div>

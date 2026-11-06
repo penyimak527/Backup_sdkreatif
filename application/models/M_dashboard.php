@@ -898,4 +898,163 @@ public function rencana_perbandingan_pemasukan_result()
 
 	return $data;
 }
+
+	// ==================== DASHBOARD SPP (READ ONLY) ====================
+	// Ringkasan dan filter SPP; dipindahkan dari M_dashboard_spp tanpa mengubah SQL.
+    private function spp_money($row, $key)
+    {
+        return isset($row[$key]) ? (float) $row[$key] : 0;
+    }
+
+    public function spp_filters()
+    {
+        $periode = $this->db->order_by('id', 'DESC')->get('master_tahun_ajaran')->result_array();
+        $kelas = $this->db->select('id,nama_kelas,id_periode')->order_by('nama_kelas', 'ASC')->get('kelas_setting')->result_array();
+        $jenis = $this->db->select('id,nama_jenis')->order_by('nama_jenis', 'ASC')->get('tagihan_jenis')->result_array();
+        $active = 0;
+        foreach ($periode as $p) {
+            if (strtoupper(trim((string) $p['status'])) === 'AKTIF') { $active = (int) $p['id']; break; }
+        }
+        if (!$active && $periode) $active = (int) $periode[0]['id'];
+        return array('periode' => $periode, 'kelas' => $kelas, 'jenis' => $jenis, 'active' => $active);
+    }
+
+    private function spp_scope($f, $withPeriod = true, $month = false)
+    {
+        $conditions = array(); $args = array();
+        if ($withPeriod && $f['periode'] > 0) { $conditions[] = 'ts.id_periode = ?'; $args[] = $f['periode']; }
+        if ($f['kelas'] > 0) { $conditions[] = 'ts.id_kelas_setting = ?'; $args[] = $f['kelas']; }
+        if ($f['tingkat'] > 0) {
+            $conditions[] = 'k.nama_kelas REGEXP ?';
+            $args[] = '(^|[^0-9])' . $f['tingkat'] . '([^0-9]|$)';
+        }
+        if ($f['jenis'] > 0) { $conditions[] = 'ts.id_jenis_tagihan = ?'; $args[] = $f['jenis']; }
+        if ($month && !empty($f['tahun_mulai'])) {
+            // Juli–Juni dalam tahun ajaran. Filter YYYYMM bersifat kumulatif, bukan bulan tunggal.
+            $startYm = ((int)$f['tahun_mulai'] * 100) + 7;
+            $endYm = !empty($f['bulan']) ? (int)$f['bulan'] : (((int)$f['tahun_mulai'] + 1) * 100 + 6);
+            $conditions[] = 'ts.bulan BETWEEN 1 AND 12 AND (ts.tahun * 100 + ts.bulan) BETWEEN ? AND ?';
+            $args[] = $startYm;
+            $args[] = $endYm;
+        }
+        return array('sql' => ($conditions ? ' AND ' . implode(' AND ', $conditions) : ''), 'params' => $args);
+    }
+
+    private function spp_activeBill()
+    {
+        // Dibebaskan/dibatalkan tidak masuk target piutang efektif.
+        return "ts.status_tagihan='Aktif' AND ts.status_pembayaran NOT IN ('Dibatalkan','Dibebaskan')";
+    }
+
+    private function spp_billBase()
+    {
+        return ' FROM tagihan_siswa ts LEFT JOIN kelas_setting k ON k.id=ts.id_kelas_setting WHERE ' . $this->spp_activeBill();
+    }
+
+    private function spp_query($sql, $args = array())
+    {
+        return $this->db->query($sql, $args)->row_array() ?: array();
+    }
+
+    public function spp_summary($f, $canTagihan, $canTabungan)
+    {
+        $out = array('bulanan' => array(), 'tahunan' => array(), 'tunggakan' => array(), 'hari_ini' => array(), 'tabungan' => array(), 'grafik' => array(), 'perbandingan_jenis' => array(), 'perbandingan_kelas' => array());
+        if ($canTagihan) {
+            $base = $this->spp_billBase();
+            $s = $this->spp_scope($f, true, true);
+            $where = $base . " AND ts.tipe_tagihan='Bulanan'" . $s['sql'];
+            $amount = $this->spp_query("SELECT COALESCE(SUM(ts.nominal_tagihan),0) target, COALESCE(SUM(ts.nominal_dibayar),0) dibayar, COALESCE(SUM(ts.sisa_tagihan),0) sisa" . $where, $s['params']);
+            // Satu siswa dihitung sekali, meskipun mempunyai beberapa tagihan bulanan.
+            $people = $this->spp_query("SELECT COALESCE(SUM(p.dibayar>0),0) sudah, COALESCE(SUM(p.dibayar=0),0) belum FROM (SELECT ts.id_siswa, SUM(ts.nominal_dibayar) dibayar" . $where . ' GROUP BY ts.id_siswa) p', $s['params']);
+            $out['bulanan'] = array('sudah' => (int)($people['sudah'] ?? 0), 'belum' => (int)($people['belum'] ?? 0), 'target' => $this->spp_money($amount,'target'), 'dibayar' => $this->spp_money($amount,'dibayar'), 'sisa' => $this->spp_money($amount,'sisa'), 'persen' => $this->spp_money($amount,'target') > 0 ? min(100, round(100 * $this->spp_money($amount,'dibayar') / $this->spp_money($amount,'target'), 2)) : 0);
+
+            $s = $this->spp_scope($f);
+            $where = $base . " AND ts.tipe_tagihan IN ('Tahunan','Langsung')" . $s['sql'];
+            $amount = $this->spp_query('SELECT COALESCE(SUM(ts.nominal_tagihan),0) target, COALESCE(SUM(ts.nominal_dibayar),0) dibayar, COALESCE(SUM(ts.sisa_tagihan),0) sisa' . $where, $s['params']);
+            $people = $this->spp_query('SELECT COALESCE(SUM(p.sisa<=0),0) lunas, COALESCE(SUM(p.sisa>0),0) belum FROM (SELECT ts.id_siswa, SUM(ts.sisa_tagihan) sisa' . $where . ' GROUP BY ts.id_siswa) p', $s['params']);
+            $out['tahunan'] = array('lunas'=>(int)($people['lunas'] ?? 0), 'belum'=>(int)($people['belum'] ?? 0), 'target'=>$this->spp_money($amount,'target'), 'dibayar'=>$this->spp_money($amount,'dibayar'), 'sisa'=>$this->spp_money($amount,'sisa'));
+
+            // Tunggakan lintas tahun ajaran; periode terpilih tidak membatasi angka ini.
+            // Tunggakan mengikuti flag pada tagihan dan masa tagih yang sudah lewat.
+            $s = $this->spp_scope($f, false);
+            $due = "( (STR_TO_DATE(ts.tanggal_jatuh_tempo,'%d-%m-%Y') IS NOT NULL AND STR_TO_DATE(ts.tanggal_jatuh_tempo,'%d-%m-%Y') < CURDATE()) OR (ts.tipe_tagihan='Bulanan' AND ts.tahun > 0 AND ts.bulan BETWEEN 1 AND 12 AND (ts.tahun * 100 + ts.bulan) < (YEAR(CURDATE()) * 100 + MONTH(CURDATE()))) )";
+            $where = $base . " AND ts.dianggap_tunggakan='Ya' AND ts.sisa_tagihan>0 AND " . $due . $s['sql'];
+            $arrears = $this->spp_query('SELECT COALESCE(SUM(ts.sisa_tagihan),0) total, COUNT(DISTINCT ts.id_siswa) siswa, COALESCE(SUM(CASE WHEN ts.id_periode=? THEN ts.sisa_tagihan ELSE 0 END),0) aktif, COALESCE(SUM(CASE WHEN ts.id_periode<>? THEN ts.sisa_tagihan ELSE 0 END),0) sebelumnya' . $where, array_merge(array($f['active'], $f['active']), $s['params']));
+            $out['tunggakan'] = array('total'=>$this->spp_money($arrears,'total'), 'siswa'=>(int)($arrears['siswa'] ?? 0), 'aktif'=>$this->spp_money($arrears,'aktif'), 'sebelumnya'=>$this->spp_money($arrears,'sebelumnya'));
+
+            $s = $this->spp_scope($f);
+            $paymentDate = "COALESCE(STR_TO_DATE(p.tanggal_transaksi,'%d-%m-%Y'),STR_TO_DATE(p.tanggal_transaksi,'%Y-%m-%d'))";
+            $payments = " FROM tagihan_pembayaran_detail pd INNER JOIN tagihan_pembayaran p ON p.id=pd.id_pembayaran INNER JOIN tagihan_siswa ts ON ts.id=pd.id_tagihan_siswa LEFT JOIN kelas_setting k ON k.id=ts.id_kelas_setting WHERE p.status_transaksi='Aktif' AND pd.status_detail='Aktif'";
+            $today = $this->spp_query('SELECT COALESCE(SUM(pd.nominal_bayar),0) total, COUNT(DISTINCT p.id) jumlah' . $payments . ' AND ' . $paymentDate . '=CURDATE()' . $s['sql'], $s['params']);
+            $out['hari_ini'] = array('total'=>$this->spp_money($today,'total'), 'jumlah'=>(int)($today['jumlah'] ?? 0));
+
+            $chartWindow = $this->spp_chartMonths($f);
+            if (!empty($f['bulan'])) {
+                $endYm = (int)$f['bulan'];
+                $chartWindow = array_values(array_filter($chartWindow, function ($m) use ($endYm) {
+                    return (int)str_replace('-', '', $m['ym']) <= $endYm;
+                }));
+            }
+            $from = $chartWindow[0]['date'];
+            $lastMonth = end($chartWindow);
+            $until = date('Y-m-d', strtotime($lastMonth['date'] . ' +1 month'));
+            $paidRows = $this->db->query('SELECT DATE_FORMAT(' . $paymentDate . ", '%Y-%m') ym, COALESCE(SUM(pd.nominal_bayar),0) nominal" . $payments . ' AND ' . $paymentDate . '>=? AND ' . $paymentDate . '<?' . $s['sql'] . ' GROUP BY ym', array_merge(array($from,$until), $s['params']))->result_array();
+            $paid = array(); foreach ($paidRows as $r) $paid[$r['ym']] = (float)$r['nominal'];
+            $targetRows = $this->db->query("SELECT ts.tahun,ts.bulan,COALESCE(SUM(ts.nominal_tagihan),0) nominal" . $base . $s['sql'] . " AND ts.bulan BETWEEN 1 AND 12 AND ts.tahun>0 GROUP BY ts.tahun,ts.bulan", $s['params'])->result_array();
+            $targets = array(); foreach ($targetRows as $r) $targets[sprintf('%04d-%02d',$r['tahun'],$r['bulan'])] = (float)$r['nominal'];
+            foreach ($chartWindow as $m) $out['grafik'][] = array('label'=>$m['label'], 'target'=>$targets[$m['ym']] ?? 0, 'bayar'=>$paid[$m['ym']] ?? 0);
+
+            $breakdowns = array('perbandingan_jenis'=>"COALESCE(NULLIF(ts.nama_jenis_tagihan,''),'Tanpa Jenis')", 'perbandingan_kelas'=>"COALESCE(NULLIF(ts.nama_kelas,''),'Tanpa Kelas')");
+            foreach ($breakdowns as $key => $group) {
+                $rows = $this->db->query('SELECT ' . $group . ' label, COALESCE(SUM(ts.nominal_tagihan),0) target, COALESCE(SUM(ts.nominal_dibayar),0) bayar' . $base . $s['sql'] . ' GROUP BY label ORDER BY target DESC LIMIT 12', $s['params'])->result_array();
+                foreach ($rows as $r) $out[$key][] = array('label'=>$r['label'], 'target'=>(float)$r['target'], 'bayar'=>(float)$r['bayar']);
+            }
+        }
+        if ($canTabungan) {
+            $saving = array();
+            foreach (array('setoran'=>'tabungan_siswa_setoran','penarikan'=>'tabungan_siswa_penarikan') as $key => $table) {
+                $s = $this->spp_savingScope($f);
+                $date = "COALESCE(STR_TO_DATE(t.tanggal_transaksi,'%d-%m-%Y'),STR_TO_DATE(t.tanggal_transaksi,'%Y-%m-%d'))";
+                $row = $this->spp_query('SELECT COALESCE(SUM(t.nominal),0) nominal FROM ' . $table . " t LEFT JOIN kelas_setting k ON k.id=t.id_kelas_setting WHERE t.status_transaksi='Aktif' AND " . $date . '=CURDATE()' . $s['sql'], $s['params']);
+                $saving[$key . '_hari_ini'] = $this->spp_money($row,'nominal');
+            }
+            // Saldo benar-benar seluruh siswa, tanpa dibatasi periode/kelas/jenis/bulan.
+            $sums = array();
+            foreach (array('setoran'=>'tabungan_siswa_setoran','penarikan'=>'tabungan_siswa_penarikan') as $key => $table) {
+                $row = $this->spp_query("SELECT COALESCE(SUM(nominal),0) nominal FROM {$table} WHERE status_transaksi='Aktif'");
+                $sums[$key] = $this->spp_money($row,'nominal');
+            }
+            $saving['saldo'] = $sums['setoran'] - $sums['penarikan'];
+            $out['tabungan'] = $saving;
+        }
+        return $out;
+    }
+
+    private function spp_savingScope($f)
+    {
+        $sql = ''; $params = array();
+        if ($f['periode'] > 0) { $sql .= ' AND t.id_periode=?'; $params[] = $f['periode']; }
+        if ($f['kelas'] > 0) { $sql .= ' AND t.id_kelas_setting=?'; $params[] = $f['kelas']; }
+        if ($f['tingkat'] > 0) { $sql .= ' AND k.nama_kelas REGEXP ?'; $params[] = '(^|[^0-9])' . $f['tingkat'] . '([^0-9]|$)'; }
+        return array('sql'=>$sql,'params'=>$params);
+    }
+
+    private function spp_chartMonths($f)
+    {
+        $period = $this->db->select('periode')->where('id',$f['periode'])->get('master_tahun_ajaran')->row_array();
+        $p = trim((string)($period['periode'] ?? ''));
+        if (preg_match('/(20\d{2})\s*[\/\-]\s*(20\d{2})/', $p, $m)) {
+            $start = (int)$m[1];
+            $startDate = sprintf('%04d-07-01', $start);
+        } else {
+            $startDate = date('Y-01-01');
+        }
+        $names = array(1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni',7=>'Juli',8=>'Agustus',9=>'September',10=>'Oktober',11=>'November',12=>'Desember');
+        $months = array();
+        for ($i=0;$i<12;$i++) {
+            $stamp = strtotime($startDate . ' +' . $i . ' months');
+            $months[] = array('date'=>date('Y-m-01',$stamp),'ym'=>date('Y-m',$stamp),'label'=>$names[(int)date('n',$stamp)] . ' ' . date('Y',$stamp));
+        }
+        return $months;
+    }
 }

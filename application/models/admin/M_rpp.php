@@ -1,4 +1,5 @@
 <?php
+
 class M_rpp extends CI_Model
 {
 
@@ -14,13 +15,13 @@ class M_rpp extends CI_Model
 	{
 
 
-		$level = $this->session->userdata('admin')['level'];
+		$level = $this->session->userdata('admin');
 		$search = $this->input->post('search');
 		if ($search != null) {
 			$this->db->like('nama_guru', $search);
 			$this->db->or_like('judul', $search);
 		}
-		if ($level == 'Admin') {
+		if ((is_array($level) && in_array('admin', array_map('strtolower', array_map('trim', (!empty($level['levels']) && is_array($level['levels']) ? $level['levels'] : explode(',', (string) ($level['level'] ?? ''))))), true))) {
 
 			$this->db->select('rpp.*, kelas.kode_kelas');
 			$this->db->from('rpp');
@@ -92,45 +93,52 @@ class M_rpp extends CI_Model
 		$id_rpp = $this->db->insert_id();
 
 
+		// File RPP bersifat opsional.
+		// Proses upload hanya dijalankan jika user benar-benar memilih file.
+		if (!empty($_FILES['file_rpp']['name'][0])) {
 
-		$files = $_FILES;
-		$file_count = count($_FILES['file_rpp']['name']);
+			$files = $_FILES;
+			$file_count = count($_FILES['file_rpp']['name']);
 
-		$data_file = [];
-		for ($i = 0; $i < $file_count; $i++) {
-			$_FILES['file_rpp']['name'] = $files['file_rpp']['name'][$i];
-			$_FILES['file_rpp']['type'] = $files['file_rpp']['type'][$i];
-			$_FILES['file_rpp']['tmp_name'] = $files['file_rpp']['tmp_name'][$i];
-			$_FILES['file_rpp']['error'] = $files['file_rpp']['error'][$i];
-			$_FILES['file_rpp']['size'] = $files['file_rpp']['size'][$i];
+			$data_file = [];
+			for ($i = 0; $i < $file_count; $i++) {
+				$_FILES['file_rpp']['name'] = $files['file_rpp']['name'][$i];
+				$_FILES['file_rpp']['type'] = $files['file_rpp']['type'][$i];
+				$_FILES['file_rpp']['tmp_name'] = $files['file_rpp']['tmp_name'][$i];
+				$_FILES['file_rpp']['error'] = $files['file_rpp']['error'][$i];
+				$_FILES['file_rpp']['size'] = $files['file_rpp']['size'][$i];
 
-			$config['upload_path'] = './storage/guru/rpp';
-			$config['allowed_types'] = 'pdf';
-			$config['max_size'] = 51200;
+				$config['upload_path'] = './storage/guru/rpp';
+				$config['allowed_types'] = 'pdf';
+				$config['max_size'] = 51200;
 
-			$original_name = pathinfo($_FILES['file_rpp']['name'], PATHINFO_FILENAME);
-			$extension = pathinfo($_FILES['file_rpp']['name'], PATHINFO_EXTENSION);
-			$safe_name = preg_replace('/[^A-Za-z0-9_\-]/', '_', $original_name);
-			$config['file_name'] = $safe_name . '.' . $extension;
+				$original_name = pathinfo($_FILES['file_rpp']['name'], PATHINFO_FILENAME);
+				$extension = pathinfo($_FILES['file_rpp']['name'], PATHINFO_EXTENSION);
+				$safe_name = preg_replace('/[^A-Za-z0-9_\-]/', '_', $original_name);
+				$config['file_name'] = $safe_name . '.' . $extension;
 
-			$this->load->library('upload', $config);
-			$this->upload->initialize($config);
+				$this->load->library('upload', $config);
+				$this->upload->initialize($config);
 
-			if (!$this->upload->do_upload('file_rpp')) {
-				echo $this->upload->display_errors();
-			} else {
-				$data_file[] = [
-					'id_rpp' => $id_rpp,
-					'file' => $safe_name . '.' . $extension
-				];
+				if (!$this->upload->do_upload('file_rpp')) {
+					echo $this->upload->display_errors();
+				} else {
+					$data_file[] = [
+						'id_rpp' => $id_rpp,
+						'file' => $safe_name . '.' . $extension
+					];
+				}
+
 			}
 
+			if (!empty($data_file)) {
+				$this->db->insert_batch('file_rpp', $data_file);
+			}
 		}
-		if (!empty($data_file)) {
-			$this->db->insert_batch('file_rpp', $data_file);
-		}
+
 		return $response;
 	}
+
 	public function edit()
 	{
 
@@ -214,6 +222,7 @@ class M_rpp extends CI_Model
 			return true;
 		}
 	}
+
 	public function hapus()
 	{
 		$id = $this->input->post('id');
@@ -224,14 +233,13 @@ class M_rpp extends CI_Model
 
 		if (!empty($file_list)) {
 			foreach ($file_list as $file) {
-				$file_path = FCPATH . 'storage/guru/rpp/' . $file['file']; // lebih aman pakai FCPATH
+				$file_path = FCPATH . 'storage/guru/rpp/' . $file['file'];
 
 				if (file_exists($file_path)) {
 					unlink($file_path);
 				}
 			}
 
-			// Hapus data file dari DB setelah file dihapus
 			$this->db->delete('file_rpp', ['id_rpp' => $id]);
 		}
 
@@ -244,8 +252,6 @@ class M_rpp extends CI_Model
 			return true;
 		}
 	}
-
-
 
 
 	public function getTanggalHariSetahun($hari)

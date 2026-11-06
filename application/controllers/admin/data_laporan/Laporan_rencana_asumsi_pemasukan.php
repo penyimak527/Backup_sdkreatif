@@ -8,93 +8,6 @@ class Laporan_rencana_asumsi_pemasukan extends CI_Controller
         header('Access-Control-Allow-Origin: *');
     }
 
-//     public function print_laporan()
-//     {
-//         $json = file_get_contents('php://input');
-//         $ambil = json_decode($json, true);
-
-//         // $tahun = $ambil['single_filter_tahun'];
-//         $semester = $ambil['semester'];
-//         $periode = $ambil['id_periode'];
-//         $get_tahun_ajaran = $this->db->get_where('master_tahun_ajaran', ['id' => $periode])->row_array();
-//         if ($semester == 'Ganjil') {
-//             $list_bulan = [
-//                 '7',
-//                 '8',
-//                 '9',
-//                 '10',
-//                 '11',
-//                 '12'
-//             ];
-
-//         } elseif ($semester == "Genap") {
-//             $list_bulan = [
-//                 '1',
-//                 '2',
-//                 '3',
-//                 '4',
-//                 '5',
-//                 '6'
-//             ];
-//         } else {
-//             // Tahunan: Juli sampai Juni
-//             $list_bulan = ['7', '8', '9', '10', '11', '12', '1', '2', '3', '4', '5', '6'];
-//         }
-
-//         // $rencana_pemasukan = $this->db->query("SELECT ka.id, ka.keterangan as kategori, COALESCE(SUM(d.total),0) as total FROM kode_akun ka 
-//         // LEFT JOIN rencana_pemasukan_jenis j ON ka.id = j.kode_akun LEFT JOIN rencana_pemasukan p on p.id = j.id_rencana_pemasukan LEFT JOIN rencana_pemasukan_detail d ON j.id = d.id_jenis  AND p.tahun = '$tahun' AND p.semester = '$semester' AND p.tahun_ajaran = '$periode'
-//         // WHERE ka.jenis = 'Pemasukan' GROUP BY ka.id ORDER BY ka.id ASC")->result_array();
-//         $rencana_pemasukan = $this->db->query("
-//     SELECT
-//         ka.id,
-//         ka.keterangan as kategori,
-//         COALESCE(MAX(j.persen),0) as persen,
-//         COALESCE(SUM(d.total),0) as total
-//     FROM kode_akun ka
-//     LEFT JOIN rencana_pemasukan_jenis j
-//         ON ka.id = j.kode_akun
-//     LEFT JOIN rencana_pemasukan p
-//         ON p.id = j.id_rencana_pemasukan
-//     LEFT JOIN rencana_pemasukan_detail d
-//         ON j.id = d.id_jenis
-//         AND p.semester = '$semester'
-//         AND p.tahun_ajaran = '$periode'
-//     WHERE ka.jenis = 'Pemasukan'
-//     GROUP BY ka.id, ka.keterangan
-//     ORDER BY ka.id ASC
-// ")->result_array();
-//         foreach ($rencana_pemasukan as &$r) {
-
-//             $persen_masuk = (float) $r['persen'];
-
-//             $asumsi_masuk = $r['total'] * ($persen_masuk / 100);
-//             $saving_nominal = $r['total'] - $asumsi_masuk;
-//             // $saving_persen =(100 - $persen_masuk) / 100;
-//             $saving_persen = $r['total'] > 0 ? (100 - $persen_masuk) / 100 : 0;
-//             $r['persen_masuk'] = $persen_masuk;
-//             $r['asumsi_masuk'] = $asumsi_masuk;
-//             $r['saving_nominal'] = $saving_nominal;
-//             $r['saving_persen'] = $saving_persen;
-
-//             // $r['nilai_bulan'] = $asumsi_masuk / count($list_bulan);
-//             $jumlah_bulan = count($list_bulan);
-
-//             $dasar_nilai_bulan = $asumsi_masuk;
-//             if (strtolower(trim($r['kategori'])) == 'dana partisipasi') {
-//                 $dasar_nilai_bulan = $r['total'];
-//             }
-//             $r['nilai_bulan'] = $jumlah_bulan > 0 ? $dasar_nilai_bulan / $jumlah_bulan : 0;
-//         }
-//         // unset($r);
-
-//         $data = [
-//             'tahun_ajaran' => $get_tahun_ajaran['periode'],
-//             'semester' => $semester,
-//             'list_bulan' => $list_bulan,
-//             'rencana_pemasukan' => $rencana_pemasukan
-//         ];
-//         $this->load->view('admin/data_laporan/laporan_rencana_asumsi_pemasukan', $data);
-//     }
 
 public function print_laporan()
 {
@@ -102,8 +15,17 @@ public function print_laporan()
     $ambil = json_decode($json, true);
 
     $semester = 'Tahunan';
-    $periode = $ambil['id_periode'];
-
+    $periode = $ambil['id_periode_form_semester'] ?? '';
+if ($periode == '') {
+        $data = [
+        'tahun_ajaran' => '-',
+        'semester' => $semester,
+        'list_bulan' => [],
+        'rencana_pemasukan' => []
+    ];
+        $this->load->view('admin/data_laporan/laporan_rencana_asumsi_pemasukan',$data);
+        return;
+    }
     $get_tahun_ajaran = $this->db->get_where('master_tahun_ajaran', [
         'id' => $periode
     ])->row_array();

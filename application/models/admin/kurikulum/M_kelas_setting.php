@@ -1,4 +1,5 @@
 <?php
+
 class M_kelas_setting extends CI_Model
 {
 
@@ -14,8 +15,8 @@ class M_kelas_setting extends CI_Model
 	{
 
 		$search = $this->input->post('search');
-		$level = $this->session->userdata('admin')['level'];
-		if ($level == 'Guru') {
+		$level = $this->session->userdata('admin');
+		if (((is_array($level) && in_array('guru', array_map('strtolower', array_map('trim', (!empty($level['levels']) && is_array($level['levels']) ? $level['levels'] : explode(',', (string) ($level['level'] ?? ''))))), true)) && !(is_array($level) && in_array('admin', array_map('strtolower', array_map('trim', (!empty($level['levels']) && is_array($level['levels']) ? $level['levels'] : explode(',', (string) ($level['level'] ?? ''))))), true)))) {
 			$this->db->where('id_guru', $this->session->userdata('admin')['id_pegawai']);
 		}
 		if ($search != null) {
@@ -47,16 +48,19 @@ class M_kelas_setting extends CI_Model
 
 
 		$id_periode = $this->input->post('id_periode');
-		$kelas = $this->db->get_where('kelas', ['id' => $id_kelas])->row_array();
+		$kelas = $this->active_class($id_kelas);
 		$periode = $this->db->get_where('master_tahun_ajaran', ['id' => $id_periode])->row_array();
 		$semester = $this->input->post('semester');
 
 
 		$id_guru = $this->input->post('id_guru');
 		$guru = $this->db->get_where('guru', ['id' => $id_guru])->row_array();
+		if (!$kelas || !$periode || !$guru || !in_array($semester, ['Ganjil', 'Genap'], true)) {
+			return false;
+		}
 		$data = [
 			'id_kelas' => $kelas['id'] ?? '',
-			'nama_kelas' => $kelas['nama_kelas'] ?? '',
+			'nama_kelas' => $this->class_label($kelas),
 			'id_guru' => $guru['id'] ?? '',
 			'wali_kelas' => $guru['nama_guru'] ?? '',
 			'id_periode' => $periode['id'] ?? '',
@@ -103,16 +107,19 @@ class M_kelas_setting extends CI_Model
 
 		$id_kelas_setting = $this->input->post('id');
 		$id_periode = $this->input->post('id_periode');
-		$kelas = $this->db->get_where('kelas', ['id' => $id_kelas])->row_array();
+		$kelas = $this->active_class($id_kelas);
 		$periode = $this->db->get_where('master_tahun_ajaran', ['id' => $id_periode])->row_array();
 		$semester = $this->input->post('semester');
 
 
 		$id_guru = $this->input->post('id_guru');
 		$guru = $this->db->get_where('guru', ['id' => $id_guru])->row_array();
+		if (!$kelas || !$periode || !$guru || !in_array($semester, ['Ganjil', 'Genap'], true)) {
+			return false;
+		}
 		$data = [
 			'id_kelas' => $kelas['id'],
-			'nama_kelas' => $kelas['nama_kelas'],
+			'nama_kelas' => $this->class_label($kelas),
 			'id_guru' => $guru['id'],
 			'wali_kelas' => $guru['nama_guru'],
 			'id_periode' => $periode['id'],
@@ -134,6 +141,21 @@ class M_kelas_setting extends CI_Model
 		$response = $this->db->delete('kelas_setting', ['id' => $id]);
 
 		return $response;
+	}
+
+	private function active_class($id)
+	{
+		$this->db->where('id', (int) $id);
+		if ($this->db->field_exists('deleted_at', 'kelas')) {
+			$this->db->where('deleted_at IS NULL', null, false);
+		}
+		return $this->db->get('kelas')->row_array();
+	}
+
+	private function class_label($kelas)
+	{
+		if (!$kelas) return '';
+		return trim(trim((string) $kelas['nama_kelas']).' '.trim((string) ($kelas['kode_kelas'] ?? '')));
 	}
 
 }

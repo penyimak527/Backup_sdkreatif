@@ -61,7 +61,15 @@ class Pegawai_jabatan extends CI_Controller
 			$this->load->view('admin/pegawai/view/cetak_pegawai/code_user', $data);
 		}
 	}
+public function nomor_urut_berikutnya()
+{
+	$nomor = $this->model->nomor_urut_berikutnya();
 
+	echo json_encode([
+		'status' => true,
+		'no_urut' => $nomor
+	]);
+}
 	public function pegawai_result()
 	{
 		$data = $this->model->pegawai_result();

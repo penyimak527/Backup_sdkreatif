@@ -782,6 +782,10 @@
         });
     }
     var total_asumsi_global_edit = 0;
+    var persen_gaji_lama_edit = 0;
+    var persen_gaji_terbaru_edit = 0;
+    var pilihan_persen_gaji_edit = 'lama';
+
     function editpengeluaran(id) {
         $.ajax({
             url: '<?= base_url('admin/perencanaan/rencana_pengeluaran/ambil_edit') ?>',
@@ -801,20 +805,17 @@
                 total_asumsi_global_edit = parseInt(res.total_asumsi || 0);
                 $('#total-asumsi-edit').html(NumberToMoney(total_asumsi_global_edit));
                 // $('#input-total-asumsi-edit').val(total_asumsi_global_edit);
-                let persenGajiEdit = 0;
+                persen_gaji_lama_edit = parseFloat(res.persen_gaji_lama || 0);
+                persen_gaji_terbaru_edit = parseFloat(res.persen_gaji_terbaru || 0);
+                pilihan_persen_gaji_edit = 'lama';
 
-                res.detail.forEach(function (d) {
-                    if (d.persen_gaji && parseFloat(d.persen_gaji) > 0) {
-                        persenGajiEdit = d.persen_gaji;
-                    }
-                });
-
-                $('#input-persen-gaji-rencana-edit').val(persenGajiEdit);
+                $('#input-persen-gaji-rencana-edit').val(persen_gaji_lama_edit);
 
                 generateTableEdit(
                     res.akun,
                     res.detail,
-                    res.semester
+                    res.semester,
+                    res.rata_rata_bulanan
                 );
                 hitungTotalEdit();
             }
@@ -874,7 +875,7 @@
     //         $('#list-pengeluaran-edit').html(html);
     //         hitungTotalEdit();
     //     }
-    function generateTableEdit(akun, detail, semester) {
+    function generateTableEdit(akun, detail, semester, rataRataBulanan) {
         let bulan = [];
 
         if (semester == 'Tahunan') {
@@ -898,7 +899,7 @@
 
         akun.forEach(function (row) {
             let namaAkun = row.keterangan || '';
-            let isGaji = namaAkun.toLowerCase().includes('gaji');
+            let isGaji = namaAkun.toLowerCase().trim() === 'gaji';
 
             let persenGajiBaris = '';
 
@@ -908,11 +909,22 @@
                 }
             });
 
+            let pilihanPersen = '';
+            if (isGaji) {
+                pilihanPersen = buatPilihanPersenGajiEdit(
+                    row.id,
+                    rataRataBulanan,
+                    persen_gaji_lama_edit,
+                    persen_gaji_terbaru_edit,
+                    'lama'
+                );
+            }
+
             html += `
         <tr>
             <td class="kolom-kategori">
                 ${namaAkun}
-                ${isGaji && persenGajiBaris ? `<br><small class="text-success">Rumus: ${persenGajiBaris}% dari rata-rata asumsi bulanan</small>` : ''}
+                ${pilihanPersen}
             </td>`;
 
             bulan.forEach(function (bln) {
@@ -975,7 +987,7 @@
                 $('#total-asumsi-edit').html(NumberToMoney(Math.round(total_asumsi_global_edit)));
                 $('#total-pengeluaran-edit').html('0');
                 $('#sisa-asumsi-edit').html(NumberToMoney(Math.round(total_asumsi_global_edit)));
-                $('#input-persen-gaji-rencana-edit').val(res.persen_gaji || 0);
+                persen_gaji_terbaru_edit = parseFloat(res.persen_gaji || 0);
                 generateTableEditBaru(res);
                 hitungTotalEdit();
             }
@@ -1030,14 +1042,27 @@
         akun.forEach(function (row) {
             let idAkun = row.id;
             let namaAkun = row.keterangan || '';
-            let isGaji = namaAkun.toLowerCase().includes('gaji');
-            let persenGaji = parseFloat(res.persen_gaji || 0);
+            let isGaji = namaAkun.toLowerCase().trim() === 'gaji';
+            let persenTerpilih = pilihan_persen_gaji_edit === 'baru'
+                ? persen_gaji_terbaru_edit
+                : persen_gaji_lama_edit;
+            let pilihanPersen = '';
+
+            if (isGaji) {
+                pilihanPersen = buatPilihanPersenGajiEdit(
+                    row.id,
+                    res.rata_rata_bulanan || 0,
+                    persen_gaji_lama_edit,
+                    persen_gaji_terbaru_edit,
+                    pilihan_persen_gaji_edit
+                );
+            }
 
             html += `
     <tr>
         <td class="kolom-kategori">
             ${namaAkun}
-            ${isGaji ? `<br><small class="text-success">Rumus: ${persenGaji}% dari rata-rata asumsi bulanan</small>` : ''}
+            ${pilihanPersen}
         </td>`;
 
             bulan.forEach(function (bln) {
@@ -1048,6 +1073,10 @@
                     defaultPengeluaran[idAkun][bln] !== undefined
                 ) {
                     nominal = parseFloat(defaultPengeluaran[idAkun][bln] || 0);
+                }
+
+                if (isGaji) {
+                    nominal = parseFloat(res.rata_rata_bulanan || 0) * persenTerpilih / 100;
                 }
 
                 html += `
@@ -1066,6 +1095,51 @@
         html += `</tbody></table></div>`;
 
         $('#list-pengeluaran-edit').html(html);
+        $('#input-persen-gaji-rencana-edit').val(
+            pilihan_persen_gaji_edit === 'baru'
+                ? persen_gaji_terbaru_edit
+                : persen_gaji_lama_edit
+        );
+        hitungTotalEdit();
+    }
+
+    function buatPilihanPersenGajiEdit(kodeAkun, rataRataBulanan, persenLama, persenTerbaru, pilihan) {
+        persenLama = parseFloat(persenLama || 0);
+        persenTerbaru = parseFloat(persenTerbaru || 0);
+
+        return `
+            <div class="mt-2">
+                <select class="form-select form-select-sm pilihan-persen-gaji-edit"
+                    data-kode-akun="${kodeAkun}"
+                    data-rata-rata="${parseFloat(rataRataBulanan || 0)}"
+                    onchange="ubahPersenGajiEdit(this)">
+                    <option value="${persenLama}" data-pilihan="lama" ${pilihan === 'lama' ? 'selected' : ''}>
+                        Persen Lama — ${persenLama}%
+                    </option>
+                    <option value="${persenTerbaru}" data-pilihan="baru" ${pilihan === 'baru' ? 'selected' : ''}>
+                        Persen Terbaru — ${persenTerbaru}%
+                    </option>
+                </select>
+                <small class="text-success rumus-gaji-edit">
+                    Rumus: ${pilihan === 'baru' ? persenTerbaru : persenLama}% dari rata-rata asumsi bulanan
+                </small>
+            </div>`;
+    }
+
+    function ubahPersenGajiEdit(el) {
+        let persen = parseFloat($(el).val() || 0);
+        let rataRataBulanan = parseFloat($(el).data('rata-rata') || 0);
+        let nominalGaji = Math.round(rataRataBulanan * persen / 100);
+
+        pilihan_persen_gaji_edit = $(el).find('option:selected').data('pilihan');
+        $('#input-persen-gaji-rencana-edit').val(persen);
+        $(el).closest('tr').find('input.nominal').val(
+            nominalGaji > 0 ? NumberToMoney(nominalGaji) : ''
+        );
+        $(el).siblings('.rumus-gaji-edit').text(
+            `Rumus: ${persen}% dari rata-rata asumsi bulanan`
+        );
+
         hitungTotalEdit();
     }
     function hitungTotalEdit() {

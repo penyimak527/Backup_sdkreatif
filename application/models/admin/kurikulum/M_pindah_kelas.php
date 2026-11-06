@@ -1,190 +1,128 @@
-<?php
+<?php defined('BASEPATH') or exit('No direct script access allowed');
+
 class M_pindah_kelas extends CI_Model
 {
+    public function class_settings()
+    {
+        return $this->db
+            ->select('ks.id,ks.nama_kelas,ks.periode,ks.semester,ks.id_periode,ks.wali_kelas,ta.status AS status_periode')
+            ->from('kelas_setting ks')
+            ->join('master_tahun_ajaran ta', 'ta.id=ks.id_periode', 'left')
+            ->order_by("CASE WHEN ta.status='Aktif' THEN 0 ELSE 1 END", '', false)
+            ->order_by('ks.id_periode', 'DESC')->order_by('ks.nama_kelas', 'ASC')->order_by('ks.semester', 'ASC')
+            ->get()->result_array();
+    }
 
-	protected $id_user;
-	function __construct()
-	{
-		parent::__construct();
-		$id_user = 1;
-	}
+    public function preview($sourceId, $target, $graduationYear)
+    {
+        $source = $this->class_setting($sourceId);
+        if (!$source) return $this->error('Kelas sumber tidak ditemukan di Kelas Setting.', 404);
+        $destinationRows = [];
+        $destination = null;
+        if ($target !== '') {
+            if ($target === 'LULUS_'.$graduationYear) {
+                if (!$this->is_grade_six($source['nama_kelas'])) return $this->error('Tujuan kelulusan hanya tersedia untuk kelas 6.', 422);
+                $destination = ['id' => $target, 'nama_kelas' => 'Alumni', 'periode' => (string) $graduationYear, 'semester' => 'Lulus'];
+                $destinationRows = $this->alumni_by_year($graduationYear);
+            } else {
+                $destination = $this->class_setting((int) $target);
+                if (!$destination) return $this->error('Kelas tujuan tidak ditemukan di Kelas Setting.', 404);
+                $destinationRows = $this->students_by_setting((int) $destination['id']);
+            }
+        }
+        return ['success' => true, 'data' => [
+            'source' => $source, 'destination' => $destination,
+            'source_rows' => $this->students_by_setting($sourceId), 'destination_rows' => $destinationRows,
+            'can_graduate' => $this->is_grade_six($source['nama_kelas']), 'graduation_year' => $graduationYear,
+        ]];
+    }
 
+    public function move($sourceId, $targetId, $studentIds)
+    {
+        $source = $this->class_setting($sourceId);
+        $target = $this->class_setting($targetId);
+        if (!$source || !$target) return $this->error('Kelas sumber atau tujuan tidak ditemukan di Kelas Setting.', 404);
+        if ((int) $sourceId === (int) $targetId) return $this->error('Kelas tujuan harus berbeda dari kelas sumber.', 422);
 
-	public function pindah_kelas_result($id_kelas_kiri, $id_periode_kiri, $id_kelas_kanan, $id_periode_kanan)
-	{
+        $this->db->trans_begin();
+        foreach ($studentIds as $studentId) {
+            $student = $this->locked_student_in_source($studentId, $sourceId);
+            if (!$student) {
+                $this->db->trans_rollback();
+                return $this->error('Ada siswa yang tidak lagi aktif pada kelas sumber. Muat ulang data lalu coba kembali.', 409);
+            }
+            $this->db->where('id_siswa', (int) $studentId)->where('id_kelas_setting', (int) $sourceId)->where_in('status_aktif', ['1', 'AKTIF'])->update('kelas_siswa', ['status_aktif' => '0']);
+            $this->db->query("UPDATE kelas_siswa ksw JOIN kelas_setting kst ON kst.id=ksw.id_kelas_setting SET ksw.status_aktif='0' WHERE ksw.id_siswa=? AND kst.id_periode=? AND ksw.status_aktif IN ('1','AKTIF')", [(int) $studentId, $target['id_periode']]);
+            $existing = $this->db->get_where('kelas_siswa', ['id_siswa' => (int) $studentId, 'id_kelas_setting' => (int) $targetId])->row_array();
+            $row = ['id_kelas_setting' => (string) $targetId, 'nis' => $student['nis'], 'id_siswa' => (string) $studentId, 'nama_siswa' => $student['nama_lengkap'], 'jenis_kelamin' => $student['jk'], 'status_aktif' => '1'];
+            if ($existing) $this->db->where('id', $existing['id'])->update('kelas_siswa', $row);
+            else $this->db->insert('kelas_siswa', $row);
+        }
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            return $this->error('Pemindahan kelas gagal disimpan.', 500);
+        }
+        $this->db->trans_commit();
+        return ['success' => true, 'data' => ['moved' => count($studentIds), 'target' => $target]];
+    }
 
+    public function graduate($sourceId, $studentIds, $year, $user)
+    {
+        $source = $this->class_setting($sourceId);
+        if (!$source) return $this->error('Kelas sumber tidak ditemukan di Kelas Setting.', 404);
+        if (!$this->is_grade_six($source['nama_kelas'])) return $this->error('Kelulusan hanya dapat dilakukan dari kelas 6.', 422);
+        if ($year !== (int) date('Y')) return $this->error('Tahun kelulusan harus menggunakan tahun berjalan.', 422);
 
-		$where_kelas_kiri = "";
-		if ($id_kelas_kiri != "") {
-			$where_kelas_kiri = $where_kelas_kiri . " AND (b.id_kelas_setting LIKE '$id_kelas_kiri')";
-		}
+        $this->db->trans_begin();
+        foreach ($studentIds as $studentId) {
+            $student = $this->locked_student_in_source($studentId, $sourceId);
+            if (!$student) {
+                $this->db->trans_rollback();
+                return $this->error('Ada siswa yang tidak lagi aktif pada kelas 6 sumber. Muat ulang data lalu coba kembali.', 409);
+            }
+            $this->db->where('id_siswa', (int) $studentId)->where_in('status_aktif', ['1', 'AKTIF'])->update('kelas_siswa', ['status_aktif' => '0']);
+            $this->db->where('id', (int) $studentId)->update('siswa', [
+                'status_siswa' => 'ALUMNI', 'status_aktif' => 'NONAKTIF', 'tahun_lulus' => (string) $year,
+                'catatan' => 'Lulus dari kelas '.$source['nama_kelas'].' tahun '.$year.'.',
+                'tanggal' => date('Y-m-d'), 'waktu' => date('H:i:s'), 'id_user' => (int) ($user['id'] ?? 0), 'nama_user' => (string) ($user['nama_user'] ?? ''),
+            ]);
+        }
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            return $this->error('Kelulusan siswa gagal disimpan.', 500);
+        }
+        $this->db->trans_commit();
+        return ['success' => true, 'data' => ['graduated' => count($studentIds), 'year' => $year]];
+    }
 
-		$where_periode_kiri = "";
-		if ($id_periode_kiri != "") {
-			$where_periode_kiri = $where_periode_kiri . " AND (b.id_periode LIKE '$id_periode_kiri')";
-		}
+    private function class_setting($id)
+    {
+        return $this->db->select('ks.id,ks.id_kelas,ks.nama_kelas,ks.id_periode,ks.periode,ks.semester,ks.id_guru,ks.wali_kelas,ta.status AS status_periode')->from('kelas_setting ks')->join('master_tahun_ajaran ta', 'ta.id=ks.id_periode', 'left')->where('ks.id', (int) $id)->get()->row_array();
+    }
 
-		$where_kelas_kanan = "";
-		if ($id_kelas_kanan != "") {
-			$where_kelas_kanan = $where_kelas_kanan . " AND (b.id_kelas_setting LIKE '$id_kelas_kanan')";
-		}
+    private function students_by_setting($id)
+    {
+        return $this->db->select('s.id,s.nis,s.nisn,s.nama_lengkap AS nama_siswa,s.jk')->from('kelas_siswa ks')->join('siswa s', 's.id=ks.id_siswa', 'inner')->where('ks.id_kelas_setting', (int) $id)->where_in('ks.status_aktif', ['1', 'AKTIF'])->where('s.status_siswa', 'AKTIF')->group_by('s.id')->order_by('s.nama_lengkap', 'ASC')->get()->result_array();
+    }
 
-		$where_periode_kanan = "";
-		if ($id_periode_kanan != "") {
-			$where_periode_kanan = $where_periode_kanan . " AND (b.id_periode LIKE '$id_periode_kanan')";
-		}
+    private function alumni_by_year($year)
+    {
+        return $this->db->select('id,nis,nisn,nama_lengkap AS nama_siswa,jk')->where('status_siswa', 'ALUMNI')->where('tahun_lulus', (string) $year)->order_by('nama_lengkap', 'ASC')->get('siswa')->result_array();
+    }
 
-		$query_kiri = "";
-		if ($id_kelas_kiri != "" && $id_periode_kiri != "") {
-			$querykr = ($id_kelas_kanan != '') ? $where_kelas_kiri : '';
-			$query_kiri = "AND a.id NOT IN (SELECT
-										a.id as id_siswa
-									FROM siswa a
-									JOIN (
-										SELECT
-											a.*,
-											a.id as id_kelas_siswa,
-											b.id_kelas,
-											b.id_periode,
-											c.nama_kelas,
-											d.periode
-										FROM kelas_siswa a
-										JOIN kelas_setting b ON a.id_kelas_setting = b.id
-										JOIN kelas c ON b.id_kelas = c.id
-										JOIN master_tahun_ajaran d ON b.id_periode = d.id
-										WHERE a.status_aktif = '1'
-									) b ON a.id = b.id_siswa
-									WHERE 1=1
-									$querykr
-									$where_periode_kiri)";
-		}
+    private function locked_student_in_source($studentId, $sourceId)
+    {
+        $rows = $this->db->query("SELECT s.id,s.nis,s.nama_lengkap,s.jk FROM siswa s JOIN kelas_siswa ks ON ks.id_siswa=s.id WHERE s.id=? AND s.status_siswa='AKTIF' AND ks.id_kelas_setting=? AND ks.status_aktif IN ('1','AKTIF') FOR UPDATE", [(int) $studentId, (int) $sourceId])->result_array();
+        return $rows ? $rows[0] : null;
+    }
 
-		$query_kanan = "";
-		if ($id_kelas_kanan != "" && $id_periode_kanan != "") {
-			$querykn = ($id_kelas_kiri != '') ? $where_kelas_kanan : '';
-			$query_kanan = "AND a.id NOT IN (SELECT
-										a.id as id_siswa
-									FROM siswa a
-									JOIN (
-										SELECT
-											a.*,
-											a.id as id_kelas_siswa,
-											b.id_kelas,
-											b.id_periode,
-											c.nama_kelas,
-											d.periode
-										FROM kelas_siswa a
-										JOIN kelas_setting b ON a.id_kelas_setting = b.id
-										JOIN kelas c ON b.id_kelas = c.id
-										JOIN master_tahun_ajaran d ON b.id_periode = d.id
-										WHERE a.status_aktif = 1
-									) b ON a.id = b.id_siswa
-									WHERE 1=1
-									$querykn
-									$where_periode_kanan)";
-		}
+    private function is_grade_six($name)
+    {
+        return (bool) preg_match('/^6(?:\D|$)/i', trim((string) $name));
+    }
 
-		$sql_kiri = $this->db->query("SELECT
-										a.*,
-										a.nama_lengkap as nama_siswa,
-										b.id_kelas_setting as id_kelas_kiri,
-										b.id_periode as id_periode_kiri,
-										b.id_kelas_siswa
-									FROM siswa a
-									LEFT JOIN (
-										SELECT
-											a.*,
-											a.id as id_kelas_siswa,
-											b.id_kelas,
-											b.id_periode,
-											c.nama_kelas,
-											d.periode
-										FROM kelas_siswa a
-										JOIN kelas_setting b ON a.id_kelas_setting = b.id
-										JOIN kelas c ON b.id_kelas = c.id
-										JOIN master_tahun_ajaran d ON b.id_periode = d.id
-										WHERE a.status_aktif = 1
-									) b ON a.id = b.id_siswa
-									WHERE 1=1
-									$query_kanan
-									$where_kelas_kiri
-									$where_periode_kiri
-									");
-
-		$sql_kanan = $this->db->query("SELECT
-										a.*,
-										a.nama_lengkap as nama_siswa,
-										b.id_kelas_setting as id_kelas_kanan,
-										b.id_periode as id_periode_kanan,
-										b.id_kelas_siswa
-									FROM siswa a
-									LEFT JOIN (
-										SELECT
-											a.*,
-											a.id as id_kelas_siswa,
-											b.id_kelas,
-											b.id_periode,
-											c.nama_kelas,
-											d.periode
-										FROM kelas_siswa a
-										JOIN kelas_setting b ON a.id_kelas_setting = b.id
-										JOIN kelas c ON b.id_kelas = c.id
-										JOIN master_tahun_ajaran d ON b.id_periode = d.id
-										WHERE a.status_aktif = '1'
-									) b ON a.id = b.id_siswa
-									WHERE 1=1
-									$query_kiri
-									$where_kelas_kanan
-									$where_periode_kanan
-									");
-
-		return [
-			'data_kiri' => $sql_kiri->result_array(),
-			'data_kanan' => $sql_kanan->result_array()
-		];
-	}
-
-	public function pindah_ke_kanan($id_kelas_setting, $checkbox_kiri)
-	{
-		foreach ($checkbox_kiri as $value) {
-			$this->db->where('id_siswa', $value);
-			$this->db->update('kelas_siswa', array('status_aktif' => 0));
-
-			$row_siswa = $this->db->get_where('siswa', array('id' => $value))->row_array();
-
-			$data = array(
-				'id_kelas_setting' => $id_kelas_setting,
-				'id_siswa' => $row_siswa['id'],
-				'nama_siswa' => $row_siswa['nama_lengkap'],
-				'nis' => $row_siswa['nis'],
-				'jenis_kelamin' => $row_siswa['jk'],
-				'status_aktif' => 1
-			);
-
-			$this->db->insert('kelas_siswa', $data);
-		}
-	}
-
-	public function pindah_ke_kiri($id_kelas_setting, $checkbox_kanan)
-	{
-		foreach ($checkbox_kanan as $value) {
-			$this->db->where('id_siswa', $value);
-			$this->db->update('kelas_siswa', array('status_aktif' => 0));
-
-			$row_siswa = $this->db->get_where('siswa', array('id' => $value))->row_array();
-
-			$data = array(
-				'id_kelas_setting' => $id_kelas_setting,
-				'id_siswa' => $row_siswa['id'],
-				'nama_siswa' => $row_siswa['nama_lengkap'],
-				'nis' => $row_siswa['nis'],
-				'jenis_kelamin' => $row_siswa['jk'],
-				'status_aktif' => 1
-			);
-
-			$this->db->insert('kelas_siswa', $data);
-		}
-	}
-
+    private function error($message, $status)
+    {
+        return ['success' => false, 'message' => $message, 'status' => $status];
+    }
 }
-?>

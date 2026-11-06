@@ -117,6 +117,10 @@
 						<label for="no_rek" class="form-label">No Rekening</label>
 						<input type="text" name="no_rekening" class="form-control" placeholder="No Rekening ..." />
 					</div>
+					<div class="mb-3">
+						<label for="no_urut" class="form-label">No Urut</label>
+						<input type="text" name="no_urut" class="form-control" placeholder="No Urut ..." id="no-urut-tambah" />
+					</div>
 
 				</form>
 			</div>
@@ -131,6 +135,21 @@
 <script>
 	$(document).ready(function () {
 		pegawai();
+		$('#tambah').on('show.bs.modal', function () {
+		$.ajax({
+			url: '<?= base_url('admin/pegawai/pegawai_jabatan/nomor_urut_berikutnya'); ?>',
+			type: 'GET',
+			dataType: 'JSON',
+			success: function (response) {
+				if (response.status === true) {
+					$('#no-urut-tambah').val(response.no_urut);
+				}
+			},
+			error: function () {
+				$('#no-urut-tambah').val('');
+			}
+		});
+	});
 		$("#btn-simpan").click(function () {
 			$('#btn-simpan').prop('disabled', true);
 			$('#btn-simpan').html('Sedang Diproses');
@@ -264,6 +283,7 @@
 		$('#edit input[name="tempat_lahir"]').val(item.tempat_lahir);
 		$('#edit input[name="tanggal_lahir"]')[0]._flatpickr.setDate(item.tanggal_lahir, true);
 		$('#edit input[name="no_tlp"]').val(item.no_tlp);
+		$('#edit input[name="no_urut"]').val(item.no_urut);
 
 	}
 

@@ -15,12 +15,37 @@ class Laporan_resume_tanggal_belum_diisi extends CI_Controller
 		if (!is_array($ambil)) {
 			$ambil = [];
 		}
-
 		$id_pegawai = $ambil['id_pegawai'] ?? null;
-
 		$laporan = $ambil['laporan'] ?? '';
-
 		$filter = $ambil['filter'] ?? '';
+		$id_periode = $ambil['id_periode_resume_tanggal'] ?? '';
+		$data_periode = [];
+		$nama_periode = '';
+
+		if ($id_periode !== '') {
+			$data_periode = $this->db
+				->get_where('master_tahun_ajaran', ['id' => $id_periode])
+				->row_array();
+
+			$nama_periode = trim((string) ($data_periode['periode'] ?? ''));
+		}
+
+		/*
+		 * Tahun Ajaran wajib dipilih dan harus ditemukan.
+		 * Jika kosong/tidak valid, kirim data kosong ke view agar tampil
+		 * "Tidak ada data", sama seperti konsep Laporan Jurnal Harian.
+		 */
+		if ($id_periode === '' || $nama_periode === '') {
+			$this->load->view('admin/data_laporan/laporan_resume_tanggal_belum_diisi', [
+				'judul' => '-',
+				'jurnal_pegawai' => [],
+				'pegawai' => 'Semua Pegawai',
+				'print' => $ambil['print'] ?? '',
+				'status' => 'Filter',
+				'laporan' => $laporan
+			]);
+			return;
+		}
 
 		if ($filter == 'tanggal') {
 			$dari_tanggal = date('d-m-Y', strtotime($ambil['dari_tanggal'] ?? ''));
@@ -39,11 +64,11 @@ class Laporan_resume_tanggal_belum_diisi extends CI_Controller
 					$sql = "   SELECT a.*
 						FROM jurnal_pegawai a
 						WHERE STR_TO_DATE(a.tanggal, '%d-%m-%Y') BETWEEN STR_TO_DATE(?, '%d-%m-%Y') 
-							AND STR_TO_DATE(?, '%d-%m-%Y')  
+							AND STR_TO_DATE(?, '%d-%m-%Y')  AND a.id_periode = ?
 							Order by  STR_TO_DATE(a.tanggal, '%d-%m-%Y') ASC,
 								STR_TO_DATE(COALESCE(a.tanggal_input, a.tanggal), '%d-%m-%Y') ASC
 						";
-					$rows = $this->db->query($sql, [$dari_tanggal, $sampai_tanggal])->result_array();
+					$rows = $this->db->query($sql, [$dari_tanggal, $sampai_tanggal, $id_periode])->result_array();
 
 					$start = DateTime::createFromFormat('d-m-Y', $dari_tanggal);
 					$end = DateTime::createFromFormat('d-m-Y', $sampai_tanggal);
@@ -53,7 +78,9 @@ class Laporan_resume_tanggal_belum_diisi extends CI_Controller
 					$allDates = [];
 					$period = new DatePeriod($start, new DateInterval('P1D'), $endInc);
 					foreach ($period as $dt) {
-						$allDates[] = $dt->format('d-m-Y');
+						if ($this->tanggalSesuaiTahunAjaran($dt, $nama_periode)) {
+							$allDates[] = $dt->format('d-m-Y');
+						}
 					}
 
 					$filled = [];
@@ -103,11 +130,11 @@ class Laporan_resume_tanggal_belum_diisi extends CI_Controller
 					$sql = "   SELECT a.*,b.nama_kelas,b.kode_kelas
 						FROM jurnal_guru a left join kelas b on a.id_kelas=b.id
 						WHERE STR_TO_DATE(a.tanggal, '%d-%m-%Y') BETWEEN STR_TO_DATE(?, '%d-%m-%Y') 
-							AND STR_TO_DATE(?, '%d-%m-%Y')  
+							AND STR_TO_DATE(?, '%d-%m-%Y')  AND id_periode = ?
 							Order by  STR_TO_DATE(a.tanggal, '%d-%m-%Y') ASC,
 								STR_TO_DATE(COALESCE(a.tanggal_input, a.tanggal), '%d-%m-%Y') ASC
 						";
-					$rows = $this->db->query($sql, [$dari_tanggal, $sampai_tanggal])->result_array();
+					$rows = $this->db->query($sql, [$dari_tanggal, $sampai_tanggal, $id_periode])->result_array();
 
 					$start = DateTime::createFromFormat('d-m-Y', $dari_tanggal);
 					$end = DateTime::createFromFormat('d-m-Y', $sampai_tanggal);
@@ -117,7 +144,9 @@ class Laporan_resume_tanggal_belum_diisi extends CI_Controller
 					$allDates = [];
 					$period = new DatePeriod($start, new DateInterval('P1D'), $endInc);
 					foreach ($period as $dt) {
-						$allDates[] = $dt->format('d-m-Y');
+						if ($this->tanggalSesuaiTahunAjaran($dt, $nama_periode)) {
+							$allDates[] = $dt->format('d-m-Y');
+						}
 					}
 
 					$tahunJadwal = null;
@@ -128,7 +157,8 @@ class Laporan_resume_tanggal_belum_diisi extends CI_Controller
 							$tahunJadwal = $tahunMulai;
 						}
 					}
-					$jadwalByGuru = $this->getJadwalByGuru($guruIds, $tahunJadwal);
+					// $jadwalByGuru = $this->getJadwalByGuru($guruIds, $tahunJadwal);
+					$jadwalByGuru = $this->getJadwalByGuru($guruIds, $id_periode);
 					$jadwalByGuruHari = $this->indexJadwalByGuruHari($jadwalByGuru);
 
 					$filled = [];
@@ -198,10 +228,15 @@ class Laporan_resume_tanggal_belum_diisi extends CI_Controller
 				}
 
 			} else {
-				$jurnal_pegawai = $this->db->query("SELECT a.* FROM jurnal_pegawai a  
-					WHERE STR_TO_DATE(a.tanggal, '%d-%m-%Y') BETWEEN STR_TO_DATE('$dari_tanggal', '%d-%m-%Y') 
-					AND STR_TO_DATE('$sampai_tanggal', '%d-%m-%Y')  
-					AND a.id_pegawai = '$id_pegawai' Order by a.tanggal asc")->result_array();
+				$jurnal_pegawai = $this->db->query(
+					"SELECT a.* FROM jurnal_pegawai a
+					 WHERE STR_TO_DATE(a.tanggal, '%d-%m-%Y') BETWEEN STR_TO_DATE(?, '%d-%m-%Y')
+					 AND STR_TO_DATE(?, '%d-%m-%Y')
+					 AND a.id_pegawai = ?
+					 AND a.id_periode = ?
+					 ORDER BY STR_TO_DATE(a.tanggal, '%d-%m-%Y') ASC",
+					[$dari_tanggal, $sampai_tanggal, $id_pegawai, $id_periode]
+				)->result_array();
 
 			}
 
@@ -231,13 +266,20 @@ class Laporan_resume_tanggal_belum_diisi extends CI_Controller
 					$sql = "SELECT nama_pegawai, tanggal_input,semester,periode
 							FROM jurnal_pegawai
 							WHERE MONTH(STR_TO_DATE(tanggal_input,'%d-%m-%Y'))=? 
-							AND YEAR(STR_TO_DATE(tanggal_input,'%d-%m-%Y'))=?";
-					$rows = $this->db->query($sql, [$bulan, $tahun])->result_array();
+							AND YEAR(STR_TO_DATE(tanggal_input,'%d-%m-%Y'))=? 	AND id_periode = ?";
+					$rows = $this->db->query($sql, [$bulan, $tahun, $id_periode])->result_array();
 					$allDates = [];
 					if ($bulan > 0 && $tahun > 0) {
 						$hari = cal_days_in_month(CAL_GREGORIAN, $bulan, $tahun);
 						for ($d = 1; $d <= $hari; $d++) {
-							$allDates[] = sprintf('%02d-%02d-%04d', $d, $bulan, $tahun);
+							$dtFilter = DateTime::createFromFormat(
+								'd-m-Y',
+								sprintf('%02d-%02d-%04d', $d, $bulan, $tahun)
+							);
+
+							if ($dtFilter && $this->tanggalSesuaiTahunAjaran($dtFilter, $nama_periode)) {
+								$allDates[] = $dtFilter->format('d-m-Y');
+							}
 						}
 					}
 
@@ -290,17 +332,25 @@ class Laporan_resume_tanggal_belum_diisi extends CI_Controller
 					$sql = "   SELECT a.*,b.nama_kelas,b.kode_kelas
 						FROM jurnal_guru a left join kelas b on a.id_kelas=b.id
 							WHERE MONTH(STR_TO_DATE(a.tanggal,'%d-%m-%Y'))=? 
-							AND YEAR(STR_TO_DATE(a.tanggal,'%d-%m-%Y'))=?";
-					$rows = $this->db->query($sql, [$bulan, $tahun])->result_array();
+							AND YEAR(STR_TO_DATE(a.tanggal,'%d-%m-%Y'))=? AND a.id_periode = ?";
+					$rows = $this->db->query($sql, [$bulan, $tahun, $id_periode])->result_array();
 					$allDates = [];
 					if ($bulan > 0 && $tahun > 0) {
 						$hari = cal_days_in_month(CAL_GREGORIAN, $bulan, $tahun);
 						for ($d = 1; $d <= $hari; $d++) {
-							$allDates[] = sprintf('%02d-%02d-%04d', $d, $bulan, $tahun);
+							$dtFilter = DateTime::createFromFormat(
+								'd-m-Y',
+								sprintf('%02d-%02d-%04d', $d, $bulan, $tahun)
+							);
+
+							if ($dtFilter && $this->tanggalSesuaiTahunAjaran($dtFilter, $nama_periode)) {
+								$allDates[] = $dtFilter->format('d-m-Y');
+							}
 						}
 					}
 
-					$jadwalByGuru = $this->getJadwalByGuru($guruIds, $tahun);
+					// $jadwalByGuru = $this->getJadwalByGuru($guruIds, $tahun);
+					$jadwalByGuru = $this->getJadwalByGuru($guruIds, $id_periode);
 					$jadwalByGuruHari = $this->indexJadwalByGuruHari($jadwalByGuru);
 
 					$filled = [];
@@ -370,7 +420,7 @@ class Laporan_resume_tanggal_belum_diisi extends CI_Controller
 				}
 			} else {
 				$jurnal_pegawai = $this->db->query("SELECT a.* FROM jurnal_pegawai a  WHERE MONTH(STR_TO_DATE(a.tanggal, '%d-%m-%Y')) = $bulan AND YEAR(STR_TO_DATE(a.tanggal, '%d-%m-%Y')) = $tahun
-				AND a.id_pegawai = '$id_pegawai' Order by a.tanggal asc")->result_array();
+				AND a.id_pegawai = '$id_pegawai' AND a.id_periode = '$id_periode' Order by a.tanggal asc")->result_array();
 
 			}
 
@@ -397,15 +447,22 @@ class Laporan_resume_tanggal_belum_diisi extends CI_Controller
 
 					$sql = "SELECT nama_pegawai, tanggal_input,semester,periode
 							FROM jurnal_pegawai
-							WHERE YEAR(STR_TO_DATE(tanggal_input,'%d-%m-%Y'))=?";
-					$rows = $this->db->query($sql, [$tahun])->result_array();
+							WHERE YEAR(STR_TO_DATE(tanggal_input,'%d-%m-%Y'))=? AND id_periode = ?";
+					$rows = $this->db->query($sql, [$tahun, $id_periode])->result_array();
 
 					$allDates = [];
 					if ($tahun > 0) {
 						for ($month = 1; $month <= 12; $month++) {
 							$hari = cal_days_in_month(CAL_GREGORIAN, $month, $tahun);
 							for ($d = 1; $d <= $hari; $d++) {
-								$allDates[] = sprintf('%02d-%02d-%04d', $d, $month, $tahun);
+								$dtFilter = DateTime::createFromFormat(
+									'd-m-Y',
+									sprintf('%02d-%02d-%04d', $d, $month, $tahun)
+								);
+
+								if ($dtFilter && $this->tanggalSesuaiTahunAjaran($dtFilter, $nama_periode)) {
+									$allDates[] = $dtFilter->format('d-m-Y');
+								}
 							}
 						}
 					}
@@ -457,19 +514,27 @@ class Laporan_resume_tanggal_belum_diisi extends CI_Controller
 
 					$sql = "   SELECT a.*,b.nama_kelas,b.kode_kelas
 						FROM jurnal_guru a left join kelas b on a.id_kelas=b.id
-							WHERE  YEAR(STR_TO_DATE(a.tanggal,'%d-%m-%Y'))=?";
-					$rows = $this->db->query($sql, [$tahun])->result_array();
+							WHERE  YEAR(STR_TO_DATE(a.tanggal,'%d-%m-%Y'))=? AND id_periode = ? ";
+					$rows = $this->db->query($sql, [$tahun, $id_periode])->result_array();
 					$allDates = [];
 					if ($tahun > 0) {
 						for ($month = 1; $month <= 12; $month++) {
 							$hari = cal_days_in_month(CAL_GREGORIAN, $month, $tahun);
 							for ($d = 1; $d <= $hari; $d++) {
-								$allDates[] = sprintf('%02d-%02d-%04d', $d, $month, $tahun);
+								$dtFilter = DateTime::createFromFormat(
+									'd-m-Y',
+									sprintf('%02d-%02d-%04d', $d, $month, $tahun)
+								);
+
+								if ($dtFilter && $this->tanggalSesuaiTahunAjaran($dtFilter, $nama_periode)) {
+									$allDates[] = $dtFilter->format('d-m-Y');
+								}
 							}
 						}
 					}
 
-					$jadwalByGuru = $this->getJadwalByGuru($guruIds, $tahun);
+					// $jadwalByGuru = $this->getJadwalByGuru($guruIds, $tahun);
+					$jadwalByGuru = $this->getJadwalByGuru($guruIds, $id_periode);
 					$jadwalByGuruHari = $this->indexJadwalByGuruHari($jadwalByGuru);
 
 					$filled = [];
@@ -538,7 +603,7 @@ class Laporan_resume_tanggal_belum_diisi extends CI_Controller
 				}
 			} else {
 				$jurnal_pegawai = $this->db->query("SELECT a.* FROM jurnal_pegawai a  WHERE YEAR(STR_TO_DATE(a.tanggal, '%d-%m-%Y')) = $tahun
-				AND a.id_pegawai = '$id_pegawai' Order by a.tanggal asc")->result_array();
+				AND a.id_pegawai = '$id_pegawai' AND a.id_periode = '$id_periode' Order by a.tanggal asc")->result_array();
 
 			}
 
@@ -577,31 +642,42 @@ class Laporan_resume_tanggal_belum_diisi extends CI_Controller
 		return $daftar_bulan[(int) $bulan] ?? 'Bulan tidak valid';
 	}
 
-	private function getJadwalByGuru(array $guruIds, ?int $tahun = null): array
-	{
-		if (empty($guruIds)) {
+	private function getJadwalByGuru(
+		array $guruIds,
+		$idPeriode
+	): array {
+		if (empty($guruIds) || empty($idPeriode)) {
 			return [];
 		}
 
-		$this->db->select("a.id, a.id_guru, a.hari, a.mapel, a.id_mapel, a.id_kelas, a.kelas, a.semester, a.periode, k.kode_kelas, COALESCE(a.kelas, k.nama_kelas) AS nama_kelas");
+		$this->db->select("
+			a.id,
+			a.id_guru,
+			a.hari,
+			a.mapel,
+			a.id_mapel,
+			a.id_kelas,
+			a.kelas,
+			a.semester,
+			a.id_periode,
+			a.periode,
+			k.kode_kelas,
+			COALESCE(a.kelas, k.nama_kelas) AS nama_kelas
+		");
 		$this->db->from('kelas_jadwal_pelajaran a');
 		$this->db->join('kelas k', 'k.id = a.id_kelas', 'left');
-		$this->db->where_in('id_guru', $guruIds);
-		$rows = $this->db->get()->result_array();
+		$this->db->where_in('a.id_guru', $guruIds);
+		$this->db->where('a.id_periode', $idPeriode);
 
+		$rows = $this->db->get()->result_array();
 		$jadwalByGuru = [];
+
 		foreach ($rows as $row) {
 			$idGuru = $row['id_guru'] ?? null;
 			if (empty($idGuru)) {
 				continue;
 			}
-			if ($tahun) {
-				$periode = trim((string) ($row['periode'] ?? ''));
-				$targetPeriode = $this->periodeDariTahun($tahun);
-				if ($periode === '' || $targetPeriode === '' || $periode !== $targetPeriode) {
-					continue;
-				}
-			}
+
 			$row['hari'] = $this->normalizeHari($row['hari'] ?? '');
 			$jadwalByGuru[$idGuru][] = $row;
 		}
@@ -733,6 +809,35 @@ class Laporan_resume_tanggal_belum_diisi extends CI_Controller
 			return '';
 		}
 		return $awal . '/' . $tahun;
+	}
+
+	/**
+	 * Memastikan tanggal filter sesuai dengan Tahun Ajaran yang dipilih.
+	 * Aturan yang digunakan: Juli-Desember masuk tahun pertama,
+	 * Januari-Juni masuk tahun kedua.
+	 *
+	 * Contoh:
+	 * - Juli 2025  => 2025/2026
+	 * - Januari 2026 => 2025/2026
+	 */
+	private function tanggalSesuaiTahunAjaran(DateTime $tanggal, string $periode): bool
+	{
+		$periode = trim($periode);
+
+		if (!preg_match('/^(\d{4})\s*\/\s*(\d{4})$/', $periode, $match)) {
+			return false;
+		}
+
+		$tahunAwal = (int) $match[1];
+		$tahunAkhir = (int) $match[2];
+		$tahunTanggal = (int) $tanggal->format('Y');
+		$bulanTanggal = (int) $tanggal->format('n');
+
+		if ($bulanTanggal >= 7) {
+			return $tahunTanggal === $tahunAwal;
+		}
+
+		return $tahunTanggal === $tahunAkhir;
 	}
 
 	private function normalizeHari(string $hari): string

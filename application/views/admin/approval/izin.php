@@ -34,6 +34,9 @@
 				<option value="1">Disetujui</option>
 				<option value="2">Ditolak</option>
 			</select>
+			<button type="button" class="btn btn-sm btn-primary text-nowrap" id="btn-pilih-semua">
+				<i class="ri-checkbox-multiple-line me-1"></i> Pilih Semua
+			</button>
 		</div>
 	</div>
 	<div id="data_approval_izin"></div>
@@ -95,6 +98,31 @@
 		$(document).on('click', 'input[id^="check-all-"]', function () {
 			let no = $(this).attr('id').split('-')[2]; // misal: dari "check-all-1", ambil "1"
 			$(`input[id^="cek_tanggal-"][id$="-${no}"]`).prop('checked', $(this).is(':checked'));
+			update_tombol_pilih_semua();
+		});
+
+		$(document).on('change', 'input[id^="cek_tanggal-"]', function () {
+			let no = $(this).attr('id').split('-').pop();
+			let semua = $(`input[id^="cek_tanggal-"][id$="-${no}"]`);
+			let semua_terpilih = semua.length > 0 && semua.filter(':checked').length === semua.length;
+
+			$(`#check-all-${no}`).prop('checked', semua_terpilih);
+			update_tombol_pilih_semua();
+		});
+
+		$(document).on('click', '#btn-pilih-semua', function () {
+			let semua_izin = $('#data_approval_izin input[id^="cek_tanggal-"]');
+
+			if (semua_izin.length === 0) {
+				return;
+			}
+
+			let semua_terpilih = semua_izin.filter(':checked').length === semua_izin.length;
+			let status_baru = !semua_terpilih;
+
+			semua_izin.prop('checked', status_baru);
+			$('#data_approval_izin input[id^="check-all-"]').prop('checked', status_baru);
+			update_tombol_pilih_semua();
 		});
 
 
@@ -143,6 +171,17 @@
 
 
 	})
+
+	function update_tombol_pilih_semua() {
+		let semua_izin = $('#data_approval_izin input[id^="cek_tanggal-"]');
+		let semua_terpilih = semua_izin.length > 0 && semua_izin.filter(':checked').length === semua_izin.length;
+
+		if (semua_terpilih) {
+			$('#btn-pilih-semua').html('<i class="ri-close-circle-line me-1"></i> Batal Pilih Semua');
+		} else {
+			$('#btn-pilih-semua').html('<i class="ri-checkbox-multiple-line me-1"></i> Pilih Semua');
+		}
+	}
 
 	function approval_izin() {
 		var tanggal_awal = $(`#flatpicker input[name="tanggal_awal"]`).val();
@@ -211,6 +250,7 @@
 
 				}
 				$('#data_approval_izin').html(table);
+				update_tombol_pilih_semua();
 				let jumlah_awal = parseInt($('#dt-length-0').val());
 				paging($('#data_approval_izin .card-mapel'), jumlah_awal);
 			}

@@ -148,7 +148,7 @@
                                             <?php
                                             $now = date('Y');
                                             $periode_tahun_selected = '';
-                                            for ($a = 2025; $a <= $now; $a++) {
+                                            for ($a = 2025; $a <= ($now + 5); $a++) {
                                                 $selected = ($a == $now) ? 'selected' : '';
                                                 echo '<option value="' . $a . '" ' . $selected . '>' . $a . '</option>';
                                             }
@@ -186,7 +186,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Tutup</button>
-                <button type="button" class="btn btn-primary" id="btn-simpan">Simpan</button>
+                <button type="button" class="btn btn-primary" id="btn-simpan" disabled>Simpan</button>
             </div>
         </div>
     </div>
@@ -300,10 +300,21 @@
         "November",
         "Desember"
     ];
+    let pembayaranSudahDigenerate = false;
+
+    function resetGeneratePembayaran() {
+        pembayaranSudahDigenerate = false;
+        $('#btn-simpan').prop('disabled', true);
+        $('#hasil_generate').empty();
+    }
+
     $(document).ready(function () {
         pegawai();
         pinjaman_pegawai();
         $("#btn-simpan").click(function () {
+            if (!pembayaranSudahDigenerate || $('#btn-simpan').prop('disabled')) {
+                return;
+            }
             $('#btn-simpan').prop('disabled', true);
             $('#btn-simpan').html('Sedang Diproses');
             var form = $("#form-tambah");
@@ -328,7 +339,7 @@
                         })
 
                         $("#form-tambah")[0].reset();
-                        $('#btn-simpan').prop('disabled', false);
+                        resetGeneratePembayaran();
                         $('#btn-simpan').html('Simpan');
                     }
                 }
@@ -366,17 +377,29 @@
             hitungLamaPinjaman();
         });
 
-        // saat modal dibuka
+        // Tombol Simpan hanya aktif setelah Generate Pembayaran berhasil.
+        $('#tambah').on('show.bs.modal', function () {
+            resetGeneratePembayaran();
+            $('#btn-simpan').html('Simpan');
+        });
         $('#tambah').on('shown.bs.modal', function () {
             generateBulanAkhir();
             hitungLamaPinjaman();
         });
+        $('#form-tambah').on('input change', 'select, input[name="nilai_pinjaman"]', function () {
+            resetGeneratePembayaran();
+        });
         $("#generate").click(function () {
             let bulanAkhir = parseInt($("#bulan_akhir").val());
-            if (!bulanAkhir) {
+            let lama = parseInt($('#form-tambah input[name="lama_pinjaman"]').val()) || 0;
+            let total = parseInt($('#form-tambah input[name="nilai_pinjaman"]').val().replace(/[^\d]/g, '')) || 0;
+            if (!bulanAkhir || lama <= 0 || total <= 0) {
+                resetGeneratePembayaran();
                 return;
             }
             generatespembayaran();
+            pembayaranSudahDigenerate = $('#hasil_generate input[name="detail_bulan[]"]').length === lama;
+            hitungTotalPinjaman();
         });
         $("#bulan_awal,#tahun_awal,#tahun_akhir").on("change", function () { generateBulanAkhir(); });
         $("#bulan_akhir").on("change", function () { hitungLamaPinjaman(); });
@@ -549,7 +572,7 @@
 
         let selisih = totalPinjaman - total;
 
-        if (selisih == 0) {
+        if (pembayaranSudahDigenerate && totalPinjaman > 0 && $('#hasil_generate .nominal').length > 0 && selisih == 0) {
 
             $("#total_angsuran").html(
                 '<span class="text-success">Rp ' +

@@ -1,7 +1,8 @@
 <div class="card">
 	<div class="card-header border-bottom border-dashed d-flex align-items-center justify-content-between">
 		<h4 class="header-title">Data <?= $title; ?></h4>
-		<?php if ($this->session->userdata('admin')['level'] == 'Admin'): ?>
+		<?php
+ if ((is_array($this->session->userdata('admin')) && in_array('admin', array_map('strtolower', array_map('trim', (!empty($this->session->userdata('admin')['levels']) && is_array($this->session->userdata('admin')['levels']) ? $this->session->userdata('admin')['levels'] : explode(',', (string) ($this->session->userdata('admin')['level'] ?? ''))))), true))): ?>
 			<button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#tambah"><i
 					class="ri-add-line"></i>Tambah</button>
 		<?php endif; ?>
@@ -175,9 +176,9 @@
 					data.forEach(function (item) {
 						let detail = btoa(JSON.stringify(item));
 
-						var level = `<?= $this->session->userdata('admin')['level']; ?>`;
+						var isAdmin = <?= (is_array($this->session->userdata('admin')) && in_array('admin', array_map('strtolower', array_map('trim', (!empty($this->session->userdata('admin')['levels']) && is_array($this->session->userdata('admin')['levels']) ? $this->session->userdata('admin')['levels'] : explode(',', (string) ($this->session->userdata('admin')['level'] ?? ''))))), true)) ? 'true' : 'false'; ?>;
 						var tombol = '';
-						if (level == 'Admin') {
+						if (isAdmin) {
 							tombol += `
 								<div class="keterangan-mapel-kanan">
 									<div class="d-flex justify-content-center gap-2">

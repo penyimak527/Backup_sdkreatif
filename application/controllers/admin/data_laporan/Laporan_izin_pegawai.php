@@ -12,18 +12,20 @@ class Laporan_izin_pegawai extends CI_Controller
 	{
 		$json = file_get_contents('php://input');
 		$ambil = json_decode($json, true);
-
+		$id_pegawai = trim((string)($ambil['id_pegawai_all'] ?? ''));
 
 		if ($ambil['filter'] == 'tanggal') {
 			$dari_tanggal = date('d-m-Y', strtotime($ambil['dari_tanggal']));
 			$sampai_tanggal = date('d-m-Y', strtotime($ambil['sampai_tanggal']));
 
-
-
+			$perpegawai = '';
+			if ($id_pegawai) {
+				$perpegawai = "AND a.id_pegawai = '$id_pegawai'";
+			}
 
 			$pegawai = $this->db->query("SELECT a.* FROM izin_pegawai a  
 					WHERE STR_TO_DATE(a.tgl_tidak_hadir, '%d-%m-%Y') BETWEEN STR_TO_DATE('$dari_tanggal', '%d-%m-%Y') 
-					AND STR_TO_DATE('$sampai_tanggal', '%d-%m-%Y') AND a.status_approval !=0   Order by a.tgl_tidak_hadir asc")->result_array();
+					AND STR_TO_DATE('$sampai_tanggal', '%d-%m-%Y') AND a.status_approval !=0 $perpegawai Order by a.tgl_tidak_hadir asc")->result_array();
 			$grouped_by_tanggal = [];
 
 			foreach ($pegawai as $data) {
@@ -40,15 +42,15 @@ class Laporan_izin_pegawai extends CI_Controller
 				'grouped_by_tanggal' => $grouped_by_tanggal,
 				'status' => 'Tanggal'
 			];
-
-
-
 		} else if ($ambil['filter'] == 'bulan') {
 			$bulan = $ambil['filter_bulan'];
 			$tahun = $ambil['filter_tahun'];
-
+			$perpegawai = '';
+			if ($id_pegawai) {
+				$perpegawai = "AND a.id_pegawai = '$id_pegawai'";
+			}
 			$pegawai = $this->db->query("SELECT a.* FROM izin_pegawai a  WHERE MONTH(STR_TO_DATE(a.tgl_tidak_hadir, '%d-%m-%Y')) = $bulan 
-			AND YEAR(STR_TO_DATE(a.tgl_tidak_hadir, '%d-%m-%Y')) = $tahun AND a.status_approval !=0
+			AND YEAR(STR_TO_DATE(a.tgl_tidak_hadir, '%d-%m-%Y')) = $tahun AND a.status_approval !=0 $perpegawai
 	  Order by a.tgl_tidak_hadir asc")->result_array();
 			$grouped_by_tanggal = [];
 			foreach ($pegawai as $data) {
@@ -64,13 +66,14 @@ class Laporan_izin_pegawai extends CI_Controller
 				'grouped_by_tanggal' => $grouped_by_tanggal,
 				'status' => 'Bulan'
 			];
-
-
 		} else {
 			$tahun = $ambil['single_filter_tahun'];
+			$perpegawai = '';
+			if ($id_pegawai) {
+				$perpegawai = "AND a.id_pegawai = '$id_pegawai'";
+			}
 
-
-			$pegawai = $this->db->query("SELECT a.* FROM izin_pegawai a  WHERE YEAR(STR_TO_DATE(a.tgl_tidak_hadir, '%d-%m-%Y')) = $tahun AND a.status_approval !=0
+			$pegawai = $this->db->query("SELECT a.* FROM izin_pegawai a  WHERE YEAR(STR_TO_DATE(a.tgl_tidak_hadir, '%d-%m-%Y')) = $tahun AND a.status_approval !=0 $perpegawai
 			  Order by a.tgl_tidak_hadir asc")->result_array();
 			foreach ($pegawai as $data) {
 				$tanggal = $data['tgl_tidak_hadir'];
@@ -84,7 +87,6 @@ class Laporan_izin_pegawai extends CI_Controller
 				'grouped_by_tanggal' => $grouped_by_tanggal,
 				'status' => 'Tahun'
 			];
-
 		}
 
 
@@ -110,5 +112,4 @@ class Laporan_izin_pegawai extends CI_Controller
 
 		return $daftar_bulan[(int) $bulan] ?? 'Bulan tidak valid';
 	}
-
 }

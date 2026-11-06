@@ -6,17 +6,15 @@ class Kelas_setting extends CI_Controller
 	{
 		parent::__construct();
 		$this->load->model('admin/kurikulum/M_kelas_setting', 'model');
-
+		$this->load->library('web_guard');
+		$this->web_guard->enforce_login($this->router->fetch_method() !== 'index');
 	}
 
 	public function index()
 	{
-		if ($this->session->userdata('admin')['username'] == null) {
-			redirect('/');
-		}
-
 		$data['title'] = 'Kelas Setting';
 		$data['level'] = $this->session->userdata('admin')['level'];
+		$data['csrf_token'] = $this->web_guard->csrf_token();
 		$this->load->view('template/header', $data);
 		$this->load->view('admin/kurikulum/kelas_setting', $data);
 		$this->load->view('template/footer');

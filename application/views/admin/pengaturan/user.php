@@ -73,8 +73,8 @@
 					</div>
 					<div class="mb-3">
 						<label for="id_pegawai" class="form-label">Level</label>
-						<select name="id_level" class="select2 form-control select2-multiple" data-toggle="select2"
-							multiple="multiple" data-placeholder="Choose ...">
+						<select name="id_level[]" id="level-tambah" class="select2 form-control select2-multiple" data-toggle="select2"
+						multiple="multiple" data-placeholder="Pilih Level">
 							<?php foreach ($level as $l): ?>
 								<option value="<?= $l['id']; ?>"><?= $l['level']; ?></option>
 							<?php endforeach; ?>
@@ -106,6 +106,17 @@
 
 <script>
 	$(document).ready(function () {
+		$('#tambah').on('shown.bs.modal', function () {
+			var level = $('#level-tambah');
+			if (level.hasClass('select2-hidden-accessible')) {
+				level.select2('destroy');
+			}
+			level.select2({
+				width: '100%',
+				dropdownParent: $('#tambah'),
+				placeholder: 'Choose ...',
+			});
+		});
 		user();
 		$("#btn-simpan").click(function () {
 			$('#btn-simpan').prop('disabled', true);

@@ -20,7 +20,7 @@ class Laporan_daftar_gaji extends CI_Controller
 
         if ((int) $bulan >= 1 && (int) $bulan <= 12 && $tahun > 0) {
             $data_laporan = $this->db->query("SELECT p.id AS id_pegawai, p.nama_pegawai, p.no_rekening, pg.gaji_bersih 
-            FROM penggajian pg JOIN pegawai p ON p.id = pg.id_pegawai WHERE pg.bulan = ? AND pg.tahun = ?
+            FROM penggajian pg INNER JOIN pegawai p ON p.id = pg.id_pegawai WHERE pg.bulan = ? AND pg.tahun = ?
             ORDER BY
         CASE
             WHEN EXISTS (
@@ -30,7 +30,7 @@ class Laporan_daftar_gaji extends CI_Controller
                   AND LOWER(TRIM(pj.jabatan)) = 'kepala sekolah'
             ) THEN 0
             ELSE 1
-        END ASC, p.id ASC", [$bulan, $tahun])->result_array();
+        END ASC, STR_TO_DATE(p.tmt, '%d-%m-%Y') ASC, p.no_urut ASC", [$bulan, $tahun])->result_array();
         }
 
         $total_gaji_bersih = array_sum(array_column($data_laporan, 'gaji_bersih'));

@@ -74,7 +74,8 @@
 						<label for="keterangan" class="form-label">Keterangan</label>
 						<input type="text" name="keterangan" class="form-control" placeholder="Keterangan ..." />
 					</div>
-					<?php if ($level == 'Admin'): ?>
+					<?php
+ if ((is_array($this->session->userdata('admin')) && in_array('admin', array_map('strtolower', array_map('trim', (!empty($this->session->userdata('admin')['levels']) && is_array($this->session->userdata('admin')['levels']) ? $this->session->userdata('admin')['levels'] : explode(',', (string) ($this->session->userdata('admin')['level'] ?? ''))))), true))): ?>
 						<div class="mb-3">
 							<label for="id_pegawai" class="form-label">Penanggung Jawab</label>
 							<select name="id_pegawai" class="form-control"></select>
@@ -129,6 +130,7 @@
 				<form id="form-edit" enctype="multipart/form-data">
 					<input type="hidden" name="id_agenda">
 					<input type="hidden" name="oldImage">
+					<input type="hidden" name="remove_file" value="0">
 					<div class="mb-3">
 						<label for="nama_kegiatan" class="form-label">Nama Kegiatan</label>
 						<input type="text" name="nama_kegiatan" class="form-control" placeholder="Nama Kegiatan ..." />
@@ -157,7 +159,7 @@
 						<label for="keterangan" class="form-label">Keterangan</label>
 						<input type="text" name="keterangan" class="form-control" placeholder="Keterangan ..." />
 					</div>
-					<?php if ($level == 'Admin'): ?>
+					<?php if ((is_array($this->session->userdata('admin')) && in_array('admin', array_map('strtolower', array_map('trim', (!empty($this->session->userdata('admin')['levels']) && is_array($this->session->userdata('admin')['levels']) ? $this->session->userdata('admin')['levels'] : explode(',', (string) ($this->session->userdata('admin')['level'] ?? ''))))), true))): ?>
 						<div class="mb-3">
 							<label for="id_pegawai" class="form-label">Penanggung Jawab</label>
 							<select name="id_pegawai" class="form-control"></select>
@@ -262,7 +264,24 @@
 		periode();
 		pegawai();
 
+		$('#edit-file').on('dropify.afterClear', function () {
+			$('#edit input[name="remove_file"]').val('1');
+		});
+
 		$("#btn-simpan").click(function () {
+			var fileInput = $('#tambah input[name="file"]')[0];
+			if (fileInput && fileInput.files.length > 0) {
+				var fileName = fileInput.files[0].name.toLowerCase();
+				if (!fileName.endsWith('.pdf')) {
+					Swal.fire({
+						icon: 'error',
+						title: 'Gagal',
+						text: 'Dokumen Agenda Tahunan harus berupa file PDF.',
+					});
+					return false;
+				}
+			}
+
 			$('#btn-simpan').prop('disabled', true);
 			$('#btn-simpan').html('Sedang Diproses');
 			var form = $("#form-tambah")[0];
@@ -275,9 +294,8 @@
 				processData: false,
 				cache: false,
 				success: function (data) {
-					$("#tambah").modal('hide');
-
 					if (data == 'true') {
+						$("#tambah").modal('hide');
 						Swal.fire({
 							icon: 'success',
 							title: 'Berhasil',
@@ -285,13 +303,32 @@
 						})
 						agenda_tahunan();
 						$("#form-tambah")[0].reset();
-						$('#btn-simpan').prop('disabled', false);
-						$('#btn-simpan').html('Simpan');
+					} else {
+						Swal.fire({
+							icon: 'error',
+							title: 'Gagal',
+							text: 'Data gagal disimpan. Pastikan dokumen yang diunggah berupa file PDF.',
+						});
 					}
+					$('#btn-simpan').prop('disabled', false);
+					$('#btn-simpan').html('Simpan');
 				}
 			})
 		})
 		$("#btn-update").click(function () {
+			var fileInput = $('#edit input[name="file"]')[0];
+			if (fileInput && fileInput.files.length > 0) {
+				var fileName = fileInput.files[0].name.toLowerCase();
+				if (!fileName.endsWith('.pdf')) {
+					Swal.fire({
+						icon: 'error',
+						title: 'Gagal',
+						text: 'Dokumen Agenda Tahunan harus berupa file PDF.',
+					});
+					return false;
+				}
+			}
+
 			var form = $("#form-edit")[0];
 			var formData = new FormData(form);
 			$.ajax({
@@ -302,15 +339,20 @@
 				processData: false,
 				cache: false,
 				success: function (data) {
-					$("#edit").modal('hide');
-
 					if (data == 'true') {
+						$("#edit").modal('hide');
 						Swal.fire({
 							icon: 'success',
 							title: 'Berhasil',
 							text: 'Data berhasil diupdate',
 						})
 						agenda_tahunan();
+					} else {
+						Swal.fire({
+							icon: 'error',
+							title: 'Gagal',
+							text: 'Data gagal diupdate. Pastikan dokumen yang diunggah berupa file PDF.',
+						});
 					}
 				}
 			})
@@ -387,7 +429,7 @@
 
 		$('#edit input[name="tempat"]').val(item.tempat);
 		$('#edit input[name="keterangan"]').val(item.keterangan);
-		$('#edit input[name="penanggung_jawab"]').val(item.penanggung_jawab);
+		pegawai(item.id_pegawai);
 		periode(item.id_periode);
 
 		$('#edit select[name="status"]').html(` 
@@ -402,6 +444,7 @@
 			dictDefaultMessage: 'Upload Agenda Tahunan'
 		});
 		$('#edit input[name="oldImage"]').val(item.file);
+		$('#edit input[name="remove_file"]').val('0');
 
 	}
 	function viewAgenda(detail) {
@@ -554,7 +597,7 @@
 				} else {
 					data.forEach(function (item) {
 						option += `
-				<option value="${item.id}" ${item.id == id_pegawai ? 'selected' : ''}>${item.nama_pegawai}</option>
+				<option value="${item.id_pegawai}" ${item.id_pegawai == id_pegawai ? 'selected' : ''}>${item.nama_pegawai}</option>
 				`;
 					});
 				}

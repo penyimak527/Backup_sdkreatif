@@ -6,45 +6,41 @@ class Siswa extends CI_Controller
 	{
 		parent::__construct();
 		$this->load->model('admin/kurikulum/M_siswa', 'model');
-
+		$this->load->library('web_guard');
+		$this->web_guard->enforce_login($this->router->fetch_method() !== 'index');
 	}
 
 	public function index()
 	{
-		if ($this->session->userdata('admin')['username'] == null) {
-			redirect('/');
-		}
-
-		$data['title'] = 'Siswa';
-		$this->load->view('template/header', $data);
-		$this->load->view('admin/kurikulum/siswa', $data);
-		$this->load->view('template/footer');
+		redirect('admin/master/siswa', 'location', 301);
 	}
 
 	public function siswa_result()
 	{
-		$data = $this->model->siswa_result();
-
-		echo json_encode($data);
+		$this->legacy_disabled();
 	}
 	public function tambah()
 	{
-		$data = $this->model->tambah();
-
-		echo json_encode($data);
+		$this->legacy_disabled();
 	}
 	public function edit()
 	{
-		$data = $this->model->edit();
-
-		echo json_encode($data);
+		$this->legacy_disabled();
 	}
 
 	public function hapus()
 	{
-		$data = $this->model->hapus();
+		$this->legacy_disabled();
+	}
 
-		echo json_encode($data);
+	private function legacy_disabled()
+	{
+		return $this->web_guard->respond_json(
+			false,
+			'Endpoint CRUD Siswa Kurikulum telah dinonaktifkan. Gunakan Master Data > Siswa.',
+			['redirect' => base_url('admin/master/siswa')],
+			410
+		);
 	}
 
 }

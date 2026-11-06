@@ -39,9 +39,8 @@ $hari_kerja = (int) ($data_hari_efektif['hari_efektif'] ?? 0);
         c.total_pendapatan
     ');
     $this->db->from('pegawai a');
-    $this->db->join('pegawai_jabatan b', 'a.id = b.id_pegawai', 'left');
+    $this->db->join('pegawai_jabatan b', 'a.id = b.id_pegawai', 'inner');
     $this->db->join('gaji c', 'a.id = c.id_pegawai', 'inner');
-    // $this->db->order_by('a.id', 'ASC');
     $this->db->order_by("
     CASE
         WHEN EXISTS (
@@ -53,6 +52,7 @@ $hari_kerja = (int) ($data_hari_efektif['hari_efektif'] ?? 0);
         ELSE 1
     END", 'ASC', false);
     $this->db->order_by("STR_TO_DATE(a.tmt, '%d-%m-%Y')", 'ASC',false);
+    $this->db->order_by('a.no_urut', 'ASC');
     $pegawai = $this->db->get()->result_array();
 
     $result = [];

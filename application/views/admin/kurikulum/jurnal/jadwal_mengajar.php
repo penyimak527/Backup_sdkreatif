@@ -7,7 +7,8 @@
 		/* atau bold */
 	}
 </style>
-<?php if ($level == 'Admin'): ?>
+<?php
+ if ((is_array($this->session->userdata('admin')) && in_array('admin', array_map('strtolower', array_map('trim', (!empty($this->session->userdata('admin')['levels']) && is_array($this->session->userdata('admin')['levels']) ? $this->session->userdata('admin')['levels'] : explode(',', (string) ($this->session->userdata('admin')['level'] ?? ''))))), true))): ?>
 	<div id="jadwal-mengajar"></div>
 <?php else: ?>
 	<div class="card">

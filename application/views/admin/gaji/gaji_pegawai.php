@@ -73,6 +73,41 @@
 					</tr>
 				</thead>
 				<tbody></tbody>
+				<tfoot>
+	<tr class="table-light fw-bold">
+		<td colspan="3" class="text-end">Total</td>
+
+		<td class="text-end" id="total_gaji_pokok">
+			Rp. 0
+		</td>
+
+		<td class="text-end" id="total_struktural">
+			Rp. 0
+		</td>
+
+		<td class="text-end" id="total_pendidikan">
+			Rp. 0
+		</td>
+
+		<td class="text-end" id="total_wali_kelas">
+			Rp. 0
+		</td>
+
+		<td></td>
+	</tr>
+
+	<tr class="table-primary fw-bold">
+		<td colspan="3" class="text-end">
+			Total Keseluruhan
+		</td>
+
+		<td colspan="4" class="text-end" id="total_semua_gaji">
+			Rp. 0
+		</td>
+
+		<td></td>
+	</tr>
+</tfoot>
 			</table>
 		</div>
 		<div
@@ -278,6 +313,10 @@
 
 				var no = 1;
 				var table = '';
+				let totalGajiPokok = 0;
+let totalStruktural = 0;
+let totalPendidikan = 0;
+let totalWaliKelas = 0;
 				if (data.length == 0) {
 					table += `
 					<tr>
@@ -285,6 +324,10 @@
 					</tr>`;
 				} else {
 					data.forEach(function (item) {
+						totalGajiPokok += parseInt(item.gaji_pokok || 0);
+totalStruktural += parseInt(item.struktural || 0);
+totalPendidikan += parseInt(item.tunjangan_pendidikan || 0);
+totalWaliKelas += parseInt(item.wali_kelas || 0);
 						let detail = btoa(JSON.stringify(item));
 						let rowNo = no++;
 						table += `
@@ -315,6 +358,26 @@
 					});
 				}
 				$('#table_gaji_pegawai tbody').html(table);
+				let totalSemuaGaji = totalGajiPokok + totalStruktural + totalPendidikan + totalWaliKelas;
+$('#total_gaji_pokok').html(
+	'Rp. ' + NumberToMoney(totalGajiPokok)
+);
+
+$('#total_struktural').html(
+	'Rp. ' + NumberToMoney(totalStruktural)
+);
+
+$('#total_pendidikan').html(
+	'Rp. ' + NumberToMoney(totalPendidikan)
+);
+
+$('#total_wali_kelas').html(
+	'Rp. ' + NumberToMoney(totalWaliKelas)
+);
+
+$('#total_semua_gaji').html(
+	'Rp. ' + NumberToMoney(totalSemuaGaji)
+);
 				update_hapus_terpilih();
 				let jumlah_awal = parseInt($('#dt-length-0').val());
 				paging($('#table_gaji_pegawai tbody tr'), jumlah_awal);

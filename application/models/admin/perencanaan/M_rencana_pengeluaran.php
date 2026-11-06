@@ -66,13 +66,42 @@ class M_rencana_pengeluaran extends CI_Model
         $header = $this->db->where('id', $id)->get('rencana_pengeluaran')->row_array();
         $detail = $this->db->where('id_rencana_pengeluaran', $id)->get('rencana_pengeluaran_detail')->result_array();
         $akun = $this->db->where('jenis', 'Pengeluaran')->order_by('id', 'ASC')->get('kode_akun')->result_array();
+        $rumus_gaji = $this->db->where('nama_potongan', 'gaji')->get('rumus_potongan')->row_array();
+        $akun_gaji = $this->db
+            ->where('jenis', 'Pengeluaran')
+            ->where('keterangan', 'Gaji')
+            ->get('kode_akun')
+            ->row_array();
+
+        $persen_gaji_lama = 0;
+        if ($akun_gaji) {
+            $detail_gaji = $this->db
+                ->where('id_rencana_pengeluaran', $id)
+                ->where('kode_akun', $akun_gaji['id'])
+                ->where('persen_gaji IS NOT NULL', null, false)
+                ->get('rencana_pengeluaran_detail')
+                ->row_array();
+
+            if ($detail_gaji) {
+                $persen_gaji_lama = (float) $detail_gaji['persen_gaji'];
+            }
+        }
+
+        $jumlah_bulan = $header['semester'] == 'Tahunan' ? 12 : 6;
+        $rata_rata_bulanan = $jumlah_bulan > 0
+            ? (float) $header['total_asumsi_pemasukan'] / $jumlah_bulan
+            : 0;
+
         return [
             'id' => $header['id'],
             'tahun_ajaran' => $header['tahun_ajaran'],
             'semester' => $header['semester'],
             'total_asumsi' => $header['total_asumsi_pemasukan'],
             'akun' => $akun,
-            'detail' => $detail
+            'persen_gaji_lama' => $persen_gaji_lama,
+            'persen_gaji_terbaru' => $rumus_gaji ? (float) $rumus_gaji['nominal_persen']: 0,
+            'rata_rata_bulanan' => $rata_rata_bulanan,
+            'detail' => $detail,
         ];
     }
     // public function ambilAsumsi()
@@ -340,7 +369,7 @@ class M_rencana_pengeluaran extends CI_Model
                 $nominal = 0;
 
                 // KHUSUS AKUN GAJI DIISI OTOMATIS
-                if (strpos(strtolower(trim($row['keterangan'])), 'gaji') !== false) {
+                if (strtolower(trim($row['keterangan'])) == 'gaji') {
                     $nominal = $nominal_gaji_per_bulan;
                 }
 
@@ -476,7 +505,7 @@ class M_rencana_pengeluaran extends CI_Model
             ->select('id')
             ->from('kode_akun')
             ->where('jenis', 'Pengeluaran')
-            ->like('LOWER(keterangan)', 'gaji')
+            ->where('keterangan', 'Gaji')
             ->get()
             ->result_array();
 
@@ -631,7 +660,7 @@ class M_rencana_pengeluaran extends CI_Model
             ->select('id')
             ->from('kode_akun')
             ->where('jenis', 'Pengeluaran')
-            ->like('LOWER(keterangan)', 'gaji')
+            ->where('keterangan', 'Gaji')
             ->get()
             ->result_array();
 
